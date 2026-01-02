@@ -50,22 +50,6 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
     }
   }, [showHint, hintPlayed])
 
-  // Smoother transition for sorting
-  const sortTransition = transition || 'transform 200ms cubic-bezier(0.25, 1, 0.5, 1)'
-
-  const style = {
-    transform: isDragging
-      ? CSS.Transform.toString(transform)
-      : swipeX !== 0
-        ? `translateX(${swipeX}px)`
-        : CSS.Transform.toString(transform),
-    transition: isSwiping ? 'none' : sortTransition,
-    opacity: isDragging ? 0.5 : 1,
-    zIndex: isDragging ? 1000 : undefined,
-    // When being dragged over, show a subtle indicator
-    boxShadow: isDragging ? '0 12px 28px rgba(0, 122, 255, 0.35)' : undefined,
-  }
-
   // Haptic feedback when drag starts
   useEffect(() => {
     if (isDragging) {
@@ -121,17 +105,32 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
 
   const isClickable = item.type === 'link' && item.url
 
+  // Separate styles: container gets sortable transform, card gets swipe transform
+  const containerStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition: isSwiping ? 'none' : 'transform 200ms cubic-bezier(0.25, 1, 0.5, 1)',
+    zIndex: isDragging ? 1000 : undefined,
+  }
+
+  const cardStyle = {
+    transform: swipeX !== 0 ? `translateX(${swipeX}px)` : undefined,
+    transition: isSwiping ? 'none' : 'transform 0.3s ease-out',
+    opacity: isDragging ? 0.5 : 1,
+    boxShadow: isDragging ? '0 12px 28px rgba(0, 122, 255, 0.35)' : undefined,
+  }
+
   return (
-    <div className="swipe-container">
+    <div
+      ref={setNodeRef}
+      style={containerStyle}
+      className={`swipe-container ${isDragging ? 'is-dragging' : ''}`}
+    >
       <div className="swipe-action delete-action">
         <span>Delete</span>
       </div>
       <div
-        ref={(node) => {
-          setNodeRef(node)
-          cardRef.current = node
-        }}
-        style={style}
+        ref={cardRef}
+        style={cardStyle}
         className={`item-card ${item.type} ${isDragging ? 'dragging' : ''} ${isClickable ? 'clickable' : ''} ${isSelected ? 'selected' : ''}`}
         onClick={handleCardClick}
         onTouchStart={selectionMode ? undefined : handleTouchStart}
