@@ -82,6 +82,7 @@ export default function FolderItem({
                 <button
                   className="add-menu-item"
                   onClick={() => {
+                    console.log('Add Note clicked for folder:', folder.id, folder.name)
                     setShowAddMenu(false)
                     onAddItem && onAddItem(folder.id)
                   }}

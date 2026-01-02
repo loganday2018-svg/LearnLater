@@ -28,6 +28,8 @@ export default function LibraryPage({
   const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [addToFolderId, setAddToFolderId] = useState(null)
 
+  console.log('LibraryPage render - addToFolderId:', addToFolderId)
+
   // Get root-level folders (no parent)
   const rootFolders = folders
     .filter(f => !f.parent_id)
