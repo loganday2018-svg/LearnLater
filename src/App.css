@@ -2086,6 +2086,16 @@ body {
   color: white;
 }
 
+/* Type filters row */
+.watchlist-filters.type-filters {
+  margin-bottom: 8px;
+}
+
+.watchlist-filters.type-filters button {
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
 /* Watch List Items */
 .watchlist-items {
   display: flex;

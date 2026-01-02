@@ -3,6 +3,7 @@ import { vibrate } from '../utils'
 
 export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggleWatched }) {
   const [filter, setFilter] = useState('all') // all, unwatched, watched
+  const [typeFilter, setTypeFilter] = useState('all') // all, youtube, movies, other
   const [showAddForm, setShowAddForm] = useState(false)
   const [mediaType, setMediaType] = useState('movie')
   const [title, setTitle] = useState('')
@@ -13,11 +14,24 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
   // Filter watch items (movies, shows, youtube)
   let watchItems = items.filter(item => item.type === 'movie' || item.type === 'show' || item.type === 'youtube')
 
+  // Apply type filter
+  if (typeFilter === 'youtube') {
+    watchItems = watchItems.filter(item => item.type === 'youtube')
+  } else if (typeFilter === 'movies') {
+    watchItems = watchItems.filter(item => item.type === 'movie' || item.type === 'show')
+  }
+
+  // Apply watched filter
   if (filter === 'unwatched') {
     watchItems = watchItems.filter(item => !item.watched)
   } else if (filter === 'watched') {
     watchItems = watchItems.filter(item => item.watched)
   }
+
+  // Count by type for filter badges
+  const allWatchItems = items.filter(item => item.type === 'movie' || item.type === 'show' || item.type === 'youtube')
+  const youtubeCount = allWatchItems.filter(item => item.type === 'youtube').length
+  const moviesCount = allWatchItems.filter(item => item.type === 'movie' || item.type === 'show').length
 
   // Sort by created date, newest first
   watchItems = [...watchItems].sort((a, b) =>
@@ -133,12 +147,35 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
         </form>
       )}
 
+      {/* Type filters */}
+      <div className="watchlist-filters type-filters">
+        <button
+          className={typeFilter === 'all' ? 'active' : ''}
+          onClick={() => setTypeFilter('all')}
+        >
+          All ({allWatchItems.length})
+        </button>
+        <button
+          className={typeFilter === 'movies' ? 'active' : ''}
+          onClick={() => setTypeFilter('movies')}
+        >
+          🎬 Movies/Shows ({moviesCount})
+        </button>
+        <button
+          className={typeFilter === 'youtube' ? 'active' : ''}
+          onClick={() => setTypeFilter('youtube')}
+        >
+          ▶️ YouTube ({youtubeCount})
+        </button>
+      </div>
+
+      {/* Watched status filters */}
       <div className="watchlist-filters">
         <button
           className={filter === 'all' ? 'active' : ''}
           onClick={() => setFilter('all')}
         >
-          All ({items.filter(i => i.type === 'movie' || i.type === 'show' || i.type === 'youtube').length})
+          All
         </button>
         <button
           className={filter === 'unwatched' ? 'active' : ''}
