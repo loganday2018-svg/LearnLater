@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { DndContext, TouchSensor, MouseSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
 import { supabase } from './supabaseClient'
@@ -8,6 +8,8 @@ import InboxPage from './components/InboxPage'
 import LibraryPage from './components/LibraryPage'
 import ShareHandler from './components/ShareHandler'
 import EditItem from './components/EditItem'
+import FloatingAddButton from './components/FloatingAddButton'
+import AddItem from './components/AddItem'
 import './App.css'
 
 function App() {
@@ -20,6 +22,18 @@ function App() {
   const [toast, setToast] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [editingItem, setEditingItem] = useState(null)
+  const [addItemType, setAddItemType] = useState(null)
+
+  // Calculate all unique tags from items for autocomplete
+  const allTags = useMemo(() => {
+    const tagSet = new Set()
+    items.forEach(item => {
+      if (item.tags && Array.isArray(item.tags)) {
+        item.tags.forEach(tag => tagSet.add(tag))
+      }
+    })
+    return Array.from(tagSet).sort()
+  }, [items])
 
   // Touch sensor with 300ms delay to prevent accidental drags
   const touchSensor = useSensor(TouchSensor, {
@@ -399,7 +413,19 @@ function App() {
         </main>
 
         <BottomNav />
+
+        <FloatingAddButton onAdd={setAddItemType} />
       </div>
+
+      {/* Add Item Modal from FAB */}
+      {addItemType && (
+        <AddItem
+          onAdd={addItem}
+          initialType={addItemType}
+          onClose={() => setAddItemType(null)}
+          allTags={allTags}
+        />
+      )}
 
       <DragOverlay>
         {activeItem && (
@@ -424,6 +450,7 @@ function App() {
           item={editingItem}
           onSave={updateItem}
           onClose={() => setEditingItem(null)}
+          allTags={allTags}
         />
       )}
     </DndContext>

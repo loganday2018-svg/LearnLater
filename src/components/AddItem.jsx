@@ -1,12 +1,15 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase, edgeFunctionUrl } from '../supabaseClient'
+import MarkdownEditor from './MarkdownEditor'
+import TagInput from './TagInput'
 
-export default function AddItem({ onAdd }) {
+export default function AddItem({ onAdd, initialType = null, onClose, allTags = [] }) {
   const [isOpen, setIsOpen] = useState(false)
   const [type, setType] = useState('link')
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [content, setContent] = useState('')
+  const [tags, setTags] = useState([])
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -14,8 +17,16 @@ export default function AddItem({ onAdd }) {
   const isSubmitting = useRef(false)
   const fileInputRef = useRef(null)
 
+  // Handle opening from FAB with specific type
+  useEffect(() => {
+    if (initialType) {
+      setType(initialType)
+      setIsOpen(true)
+    }
+  }, [initialType])
+
   const isValidUrl = (urlString) => {
-    if (!urlString) return true // URL is now optional
+    if (!urlString) return true
     try {
       const urlObj = new URL(urlString)
       return urlObj.protocol === 'http:' || urlObj.protocol === 'https:'
@@ -91,7 +102,6 @@ export default function AddItem({ onAdd }) {
     isSubmitting.current = true
     setLoading(true)
 
-    // Validate URL for link type (only if URL is provided)
     if (type === 'link' && url && !isValidUrl(url)) {
       alert('Please enter a valid URL starting with http:// or https://')
       setLoading(false)
@@ -99,7 +109,6 @@ export default function AddItem({ onAdd }) {
       return
     }
 
-    // Validate image is selected for image type
     if (type === 'image' && !imageFile) {
       alert('Please select an image')
       setLoading(false)
@@ -121,17 +130,13 @@ export default function AddItem({ onAdd }) {
         url: type === 'link' && url.trim() ? url.trim() : null,
         content: (type === 'text' || type === 'link') && content.trim() ? content.trim() : null,
         image_url: imageUrl,
+        tags: tags.length > 0 ? tags : null,
       }
 
       const success = await onAdd(newItem)
 
       if (success) {
-        setTitle('')
-        setUrl('')
-        setContent('')
-        setImageFile(null)
-        setImagePreview(null)
-        setIsOpen(false)
+        resetForm()
       }
     } catch (err) {
       console.error('Error:', err)
@@ -142,50 +147,49 @@ export default function AddItem({ onAdd }) {
     isSubmitting.current = false
   }
 
-  function handleClose() {
-    setIsOpen(false)
-    setType('link')
+  function resetForm() {
     setTitle('')
     setUrl('')
     setContent('')
+    setTags([])
     setImageFile(null)
     setImagePreview(null)
+    setIsOpen(false)
+    if (onClose) onClose()
   }
 
-  if (!isOpen) {
+  function handleClose() {
+    resetForm()
+    setType('link')
+  }
+
+  // If opened via FAB, render as modal
+  if (initialType && isOpen) {
     return (
-      <button className="add-btn" onClick={() => setIsOpen(true)}>
-        + Add New
-      </button>
+      <div className="modal-overlay" onClick={handleClose}>
+        <div className="modal-content add-item-modal" onClick={e => e.stopPropagation()}>
+          <div className="modal-header">
+            <h3>
+              {type === 'link' && '🔗 Add Link'}
+              {type === 'text' && '📝 Add Note'}
+              {type === 'image' && '🖼️ Add Image'}
+              {type === 'checklist' && '☑️ Add Checklist'}
+            </h3>
+            <button className="close-btn" onClick={handleClose}>×</button>
+          </div>
+          {renderForm()}
+        </div>
+      </div>
     )
   }
 
-  return (
-    <div className="add-item-form">
-      <div className="type-toggle">
-        <button
-          className={type === 'link' ? 'active' : ''}
-          onClick={() => setType('link')}
-          type="button"
-        >
-          Link
-        </button>
-        <button
-          className={type === 'text' ? 'active' : ''}
-          onClick={() => setType('text')}
-          type="button"
-        >
-          Text
-        </button>
-        <button
-          className={type === 'image' ? 'active' : ''}
-          onClick={() => setType('image')}
-          type="button"
-        >
-          Image
-        </button>
-      </div>
+  // Default inline mode
+  if (!isOpen) {
+    return null // FAB handles the button now
+  }
 
+  function renderForm() {
+    return (
       <form onSubmit={handleSubmit}>
         <input
           type="text"
@@ -194,6 +198,7 @@ export default function AddItem({ onAdd }) {
           onChange={(e) => setTitle(e.target.value)}
           required
           maxLength={200}
+          autoFocus
         />
 
         {type === 'link' && (
@@ -212,23 +217,21 @@ export default function AddItem({ onAdd }) {
               />
               {fetchingPreview && <span className="fetching-indicator">...</span>}
             </div>
-            <textarea
-              placeholder="Add notes about this link (optional)"
+            <MarkdownEditor
               value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={2}
-              maxLength={10000}
+              onChange={setContent}
+              placeholder="Add notes about this link (supports markdown)"
+              rows={3}
             />
           </>
         )}
 
-        {type === 'text' && (
-          <textarea
-            placeholder="Additional notes (optional)"
+        {(type === 'text' || type === 'checklist') && (
+          <MarkdownEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={4}
-            maxLength={10000}
+            onChange={setContent}
+            placeholder={type === 'checklist' ? 'Use toolbar to add checkboxes' : 'Write your note (supports markdown)'}
+            rows={6}
           />
         )}
 
@@ -267,6 +270,12 @@ export default function AddItem({ onAdd }) {
           </div>
         )}
 
+        <TagInput
+          tags={tags}
+          onChange={setTags}
+          allTags={allTags}
+        />
+
         <div className="form-actions">
           <button type="button" onClick={handleClose}>
             Cancel
@@ -276,6 +285,35 @@ export default function AddItem({ onAdd }) {
           </button>
         </div>
       </form>
+    )
+  }
+
+  return (
+    <div className="add-item-form">
+      <div className="type-toggle">
+        <button
+          className={type === 'link' ? 'active' : ''}
+          onClick={() => setType('link')}
+          type="button"
+        >
+          Link
+        </button>
+        <button
+          className={type === 'text' ? 'active' : ''}
+          onClick={() => setType('text')}
+          type="button"
+        >
+          Text
+        </button>
+        <button
+          className={type === 'image' ? 'active' : ''}
+          onClick={() => setType('image')}
+          type="button"
+        >
+          Image
+        </button>
+      </div>
+      {renderForm()}
     </div>
   )
 }

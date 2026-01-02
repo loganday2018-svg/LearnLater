@@ -85,11 +85,23 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
 
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase()
-    inboxItems = inboxItems.filter(item =>
-      item.title?.toLowerCase().includes(query) ||
-      item.content?.toLowerCase().includes(query) ||
-      item.url?.toLowerCase().includes(query)
-    )
+    // Check if searching for a tag (starts with #)
+    const isTagSearch = query.startsWith('#')
+    const searchTerm = isTagSearch ? query.slice(1) : query
+
+    inboxItems = inboxItems.filter(item => {
+      if (isTagSearch) {
+        // Search only in tags
+        return item.tags?.some(tag => tag.toLowerCase().includes(searchTerm))
+      }
+      // Search in title, content, url, and tags
+      return (
+        item.title?.toLowerCase().includes(query) ||
+        item.content?.toLowerCase().includes(query) ||
+        item.url?.toLowerCase().includes(query) ||
+        item.tags?.some(tag => tag.toLowerCase().includes(query))
+      )
+    })
   }
 
   inboxItems = [...inboxItems].sort((a, b) => {
@@ -161,7 +173,7 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
           <span className="search-icon">🔍</span>
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search or #tag..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />

@@ -1,9 +1,12 @@
 import { useState } from 'react'
+import MarkdownEditor from './MarkdownEditor'
+import TagInput from './TagInput'
 
-export default function EditItem({ item, onSave, onClose }) {
+export default function EditItem({ item, onSave, onClose, allTags = [] }) {
   const [title, setTitle] = useState(item.title || '')
   const [url, setUrl] = useState(item.url || '')
   const [content, setContent] = useState(item.content || '')
+  const [tags, setTags] = useState(item.tags || [])
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(e) {
@@ -16,6 +19,7 @@ export default function EditItem({ item, onSave, onClose }) {
       title: title.trim(),
       url: item.type === 'link' && url.trim() ? url.trim() : null,
       content: (item.type === 'text' || item.type === 'link') && content.trim() ? content.trim() : null,
+      tags: tags.length > 0 ? tags : null,
     }
 
     await onSave(item.id, updates)
@@ -56,13 +60,12 @@ export default function EditItem({ item, onSave, onClose }) {
                 />
               </label>
               <label>
-                <span>Notes (optional)</span>
-                <textarea
+                <span>Notes (supports markdown)</span>
+                <MarkdownEditor
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  onChange={setContent}
                   placeholder="Your notes about this link..."
                   rows={3}
-                  maxLength={10000}
                 />
               </label>
             </>
@@ -70,13 +73,12 @@ export default function EditItem({ item, onSave, onClose }) {
 
           {item.type === 'text' && (
             <label>
-              <span>Notes (optional)</span>
-              <textarea
+              <span>Notes (supports markdown)</span>
+              <MarkdownEditor
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={setContent}
                 placeholder="Your notes..."
-                rows={4}
-                maxLength={10000}
+                rows={5}
               />
             </label>
           )}
@@ -86,6 +88,15 @@ export default function EditItem({ item, onSave, onClose }) {
               <img src={item.image_url} alt={item.title} />
             </div>
           )}
+
+          <label>
+            <span>Tags</span>
+            <TagInput
+              tags={tags}
+              onChange={setTags}
+              allTags={allTags}
+            />
+          </label>
 
           <div className="form-actions">
             <button type="button" onClick={onClose}>Cancel</button>

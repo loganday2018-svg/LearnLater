@@ -149,6 +149,17 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
               <img src={item.image_url} alt={item.title} />
             </div>
           )}
+
+          {item.tags && item.tags.length > 0 && (
+            <div className="card-tags">
+              {item.tags.slice(0, 3).map(tag => (
+                <span key={tag} className="card-tag">{tag}</span>
+              ))}
+              {item.tags.length > 3 && (
+                <span className="card-tag more">+{item.tags.length - 3}</span>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="card-actions">
