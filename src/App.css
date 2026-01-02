@@ -2802,6 +2802,11 @@ body {
     display: none;
   }
 
+  /* Hide delete button on mobile - swipe to delete instead */
+  .card-actions .delete-btn {
+    display: none;
+  }
+
   .auth-card {
     padding: 24px;
   }
