@@ -571,4 +571,4 @@ function App() {
 }
 
 export default App
-// Trigger redeploy Fri, Jan 2, 2026 12:05 PM - fix add note in library + hide X on mobile
+// Force rebuild Fri Jan 2 2026 12:20 PM - dropdown menu for folder add
