@@ -72,7 +72,10 @@ export default function FolderItem({
           <div className="add-menu-container" ref={menuRef}>
             <button
               className="folder-action-btn"
-              onClick={() => setShowAddMenu(!showAddMenu)}
+              onClick={() => {
+                console.log('Plus button clicked, showAddMenu was:', showAddMenu)
+                setShowAddMenu(!showAddMenu)
+              }}
               title="Add to folder"
             >
               +
