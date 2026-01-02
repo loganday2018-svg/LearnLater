@@ -72,10 +72,7 @@ export default function FolderItem({
           <div className="add-menu-container" ref={menuRef}>
             <button
               className="folder-action-btn"
-              onClick={() => {
-                console.log('Plus button clicked, showAddMenu was:', showAddMenu)
-                setShowAddMenu(!showAddMenu)
-              }}
+              onClick={() => setShowAddMenu(!showAddMenu)}
               title="Add to folder"
             >
               +
@@ -84,29 +81,9 @@ export default function FolderItem({
               <div className="add-menu-dropdown">
                 <button
                   className="add-menu-item"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    console.log('Add Note clicked for folder:', folder.id, folder.name)
-                    console.log('onAddItem is:', typeof onAddItem)
+                  onClick={() => {
                     setShowAddMenu(false)
-                    if (onAddItem) {
-                      onAddItem(folder.id)
-                    } else {
-                      console.error('onAddItem is not defined!')
-                    }
-                  }}
-                  onTouchEnd={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    console.log('Add Note touched for folder:', folder.id, folder.name)
-                    console.log('onAddItem is:', typeof onAddItem)
-                    setShowAddMenu(false)
-                    if (onAddItem) {
-                      onAddItem(folder.id)
-                    } else {
-                      console.error('onAddItem is not defined!')
-                    }
+                    onAddItem && onAddItem(folder.id)
                   }}
                 >
                   📝 Add Note
