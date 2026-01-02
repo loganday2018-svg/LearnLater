@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { DndContext, TouchSensor, MouseSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core'
+import { DndContext, TouchSensor, MouseSensor, useSensor, useSensors, DragOverlay, closestCenter } from '@dnd-kit/core'
+import { arrayMove } from '@dnd-kit/sortable'
 import { supabase } from './supabaseClient'
 import Auth from './components/Auth'
 import BottomNav from './components/BottomNav'
@@ -10,6 +11,9 @@ import ShareHandler from './components/ShareHandler'
 import EditItem from './components/EditItem'
 import FloatingAddButton from './components/FloatingAddButton'
 import AddItem from './components/AddItem'
+import WatchListPage from './components/WatchListPage'
+import BooksPage from './components/BooksPage'
+import MenuOverlay from './components/MenuOverlay'
 import './App.css'
 
 function App() {
@@ -23,6 +27,7 @@ function App() {
   const [pendingDelete, setPendingDelete] = useState(null)
   const [editingItem, setEditingItem] = useState(null)
   const [addItemType, setAddItemType] = useState(null)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   // Calculate all unique tags from items for autocomplete
   const allTags = useMemo(() => {
@@ -305,6 +310,72 @@ function App() {
     }
   }
 
+  async function toggleWatched(itemId, watched) {
+    try {
+      const { error } = await supabase
+        .from('items')
+        .update({ watched })
+        .eq('id', itemId)
+
+      if (error) {
+        console.error('Error updating watched status:', error)
+        setError('Failed to update')
+      } else {
+        setItems(items.map(item =>
+          item.id === itemId ? { ...item, watched } : item
+        ))
+      }
+    } catch (err) {
+      console.error('Network error:', err)
+      setError('Network error - please try again')
+    }
+  }
+
+  async function reorderItems(activeId, overId) {
+    // Get inbox items only (same filter as InboxPage)
+    const inboxTypes = ['link', 'text', 'image', 'checklist']
+    const inboxItems = items.filter(item => !item.folder_id && inboxTypes.includes(item.type))
+
+    const oldIndex = inboxItems.findIndex(item => item.id === activeId)
+    const newIndex = inboxItems.findIndex(item => item.id === overId)
+
+    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return
+
+    // Reorder locally
+    const reordered = arrayMove(inboxItems, oldIndex, newIndex)
+
+    // Assign new sort_order values
+    const updates = reordered.map((item, index) => ({
+      id: item.id,
+      sort_order: index
+    }))
+
+    // Update local state immediately
+    setItems(prev => {
+      const newItems = [...prev]
+      updates.forEach(update => {
+        const idx = newItems.findIndex(item => item.id === update.id)
+        if (idx !== -1) {
+          newItems[idx] = { ...newItems[idx], sort_order: update.sort_order }
+        }
+      })
+      return newItems
+    })
+
+    // Persist to database
+    try {
+      for (const update of updates) {
+        await supabase
+          .from('items')
+          .update({ sort_order: update.sort_order })
+          .eq('id', update.id)
+      }
+    } catch (err) {
+      console.error('Error saving order:', err)
+      // Don't show error - local reorder is good enough
+    }
+  }
+
   function handleDragStart(event) {
     const { active } = event
     if (active.data.current?.type === 'item') {
@@ -318,10 +389,21 @@ function App() {
 
     if (!over) return
 
+    // Handle drag to folder
     if (active.data.current?.type === 'item' && over.data.current?.type === 'folder') {
       const itemId = active.data.current.item.id
       const folderId = over.data.current.folderId
       moveItemToFolder(itemId, folderId)
+      return
+    }
+
+    // Handle sortable reorder (item dropped on another item)
+    if (active.data.current?.type === 'item' && over.data.current?.type === 'item') {
+      const activeId = active.id
+      const overId = over.id
+      if (activeId !== overId) {
+        reorderItems(activeId, overId)
+      }
     }
   }
 
@@ -342,14 +424,15 @@ function App() {
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={closestCenter}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
       <div className="app">
         <header className="header">
           <h1>LearnLater</h1>
-          <button className="sign-out-btn" onClick={handleSignOut}>
-            Sign Out
+          <button className="hamburger-btn" onClick={() => setMenuOpen(true)}>
+            ☰
           </button>
         </header>
 
@@ -397,6 +480,30 @@ function App() {
                   onCreateFolder={createFolder}
                   onDeleteFolder={deleteFolder}
                   onDeleteItem={deleteItem}
+                  onAddItem={addItem}
+                />
+              }
+            />
+            <Route
+              path="/watch"
+              element={
+                <WatchListPage
+                  items={items}
+                  onAdd={addItem}
+                  onDelete={deleteItem}
+                  onEdit={setEditingItem}
+                  onToggleWatched={toggleWatched}
+                />
+              }
+            />
+            <Route
+              path="/books"
+              element={
+                <BooksPage
+                  items={items}
+                  onAdd={addItem}
+                  onDelete={deleteItem}
+                  onUpdate={updateItem}
                 />
               }
             />
@@ -453,6 +560,13 @@ function App() {
           allTags={allTags}
         />
       )}
+
+      {/* Menu Overlay */}
+      <MenuOverlay
+        isOpen={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        onSignOut={handleSignOut}
+      />
     </DndContext>
   )
 }

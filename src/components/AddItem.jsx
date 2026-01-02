@@ -14,8 +14,14 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
   const [imagePreview, setImagePreview] = useState(null)
   const [loading, setLoading] = useState(false)
   const [fetchingPreview, setFetchingPreview] = useState(false)
+  const [author, setAuthor] = useState('')
+  const [readingStatus, setReadingStatus] = useState('want_to_read')
   const isSubmitting = useRef(false)
   const fileInputRef = useRef(null)
+
+  // Check if this is a watch type
+  const isWatchType = type === 'movie' || type === 'show' || type === 'youtube'
+  const isBookType = type === 'book'
 
   // Handle opening from FAB with specific type
   useEffect(() => {
@@ -124,13 +130,30 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
         imageUrl = await uploadImage(imageFile, session.user.id)
       }
 
-      const newItem = {
+      let newItem = {
         type,
         title: title.trim(),
-        url: type === 'link' && url.trim() ? url.trim() : null,
-        content: (type === 'text' || type === 'link') && content.trim() ? content.trim() : null,
-        image_url: imageUrl,
-        tags: tags.length > 0 ? tags : null,
+      }
+
+      // Handle different types
+      if (type === 'link') {
+        newItem.url = url.trim() || null
+        newItem.content = content.trim() || null
+        newItem.tags = tags.length > 0 ? tags : null
+      } else if (type === 'text' || type === 'checklist') {
+        newItem.content = content.trim() || null
+        newItem.tags = tags.length > 0 ? tags : null
+      } else if (type === 'image') {
+        newItem.image_url = imageUrl
+        newItem.tags = tags.length > 0 ? tags : null
+      } else if (isWatchType) {
+        newItem.url = url.trim() || null
+        newItem.content = content.trim() || null
+        newItem.watched = false
+      } else if (isBookType) {
+        newItem.author = author.trim() || null
+        newItem.reading_status = readingStatus
+        newItem.book_notes = []
       }
 
       const success = await onAdd(newItem)
@@ -154,6 +177,8 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
     setTags([])
     setImageFile(null)
     setImagePreview(null)
+    setAuthor('')
+    setReadingStatus('want_to_read')
     setIsOpen(false)
     if (onClose) onClose()
   }
@@ -163,18 +188,27 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
     setType('link')
   }
 
+  function getModalTitle() {
+    switch (type) {
+      case 'link': return '🔗 Add Link'
+      case 'text': return '📝 Add Note'
+      case 'image': return '🖼️ Add Image'
+      case 'checklist': return '☑️ Add Checklist'
+      case 'movie': return '🎬 Add Movie'
+      case 'show': return '📺 Add TV Show'
+      case 'youtube': return '▶️ Add YouTube'
+      case 'book': return '📖 Add Book'
+      default: return 'Add Item'
+    }
+  }
+
   // If opened via FAB, render as modal
   if (initialType && isOpen) {
     return (
       <div className="modal-overlay" onClick={handleClose}>
         <div className="modal-content add-item-modal" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
-            <h3>
-              {type === 'link' && '🔗 Add Link'}
-              {type === 'text' && '📝 Add Note'}
-              {type === 'image' && '🖼️ Add Image'}
-              {type === 'checklist' && '☑️ Add Checklist'}
-            </h3>
+            <h3>{getModalTitle()}</h3>
             <button className="close-btn" onClick={handleClose}>×</button>
           </div>
           {renderForm()}
@@ -270,11 +304,54 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
           </div>
         )}
 
-        <TagInput
-          tags={tags}
-          onChange={setTags}
-          allTags={allTags}
-        />
+        {/* Watch type fields (movie, show, youtube) */}
+        {isWatchType && (
+          <>
+            {type === 'youtube' && (
+              <input
+                type="url"
+                placeholder="YouTube URL (optional)"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+              />
+            )}
+            <textarea
+              placeholder="Notes (who recommended it, where to watch, etc.)"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={3}
+            />
+          </>
+        )}
+
+        {/* Book type fields */}
+        {isBookType && (
+          <>
+            <input
+              type="text"
+              placeholder="Author (optional)"
+              value={author}
+              onChange={(e) => setAuthor(e.target.value)}
+            />
+            <div className="status-select">
+              <label>Status:</label>
+              <select value={readingStatus} onChange={(e) => setReadingStatus(e.target.value)}>
+                <option value="want_to_read">Want to Read</option>
+                <option value="reading">Reading</option>
+                <option value="finished">Finished</option>
+              </select>
+            </div>
+          </>
+        )}
+
+        {/* Tags only for non-watch/non-book types */}
+        {!isWatchType && !isBookType && (
+          <TagInput
+            tags={tags}
+            onChange={setTags}
+            allTags={allTags}
+          />
+        )}
 
         <div className="form-actions">
           <button type="button" onClick={handleClose}>

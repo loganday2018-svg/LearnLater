@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import FolderItem from './FolderItem'
 import CreateFolder from './CreateFolder'
+import AddItem from './AddItem'
 
 function RootDropZone({ children }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -21,9 +22,11 @@ export default function LibraryPage({
   folders,
   onCreateFolder,
   onDeleteFolder,
-  onDeleteItem
+  onDeleteItem,
+  onAddItem
 }) {
   const [showCreateFolder, setShowCreateFolder] = useState(false)
+  const [addToFolderId, setAddToFolderId] = useState(null)
 
   // Get root-level folders (no parent)
   const rootFolders = folders
@@ -36,7 +39,7 @@ export default function LibraryPage({
   return (
     <div className="library-page">
       <div className="library-header">
-        <h2>Library</h2>
+        <h2>Long Term Notes</h2>
         <button className="add-folder-btn" onClick={() => setShowCreateFolder(true)}>
           + New Folder
         </button>
@@ -62,6 +65,7 @@ export default function LibraryPage({
                 onCreateFolder={onCreateFolder}
                 onDeleteFolder={onDeleteFolder}
                 onDeleteItem={onDeleteItem}
+                onAddItem={setAddToFolderId}
               />
             ))}
           </div>
@@ -76,6 +80,19 @@ export default function LibraryPage({
             const success = await onCreateFolder(name, parentId)
             return success
           }}
+        />
+      )}
+
+      {/* Add Item to Folder Modal */}
+      {addToFolderId && (
+        <AddItem
+          onAdd={async (item) => {
+            const success = await onAddItem({ ...item, folder_id: addToFolderId })
+            if (success) setAddToFolderId(null)
+            return success
+          }}
+          initialType="text"
+          onClose={() => setAddToFolderId(null)}
         />
       )}
     </div>

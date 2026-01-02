@@ -7,7 +7,10 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
   const [url, setUrl] = useState(item.url || '')
   const [content, setContent] = useState(item.content || '')
   const [tags, setTags] = useState(item.tags || [])
+  const [mediaType, setMediaType] = useState(item.type || 'movie')
   const [loading, setLoading] = useState(false)
+
+  const isWatchType = item.type === 'movie' || item.type === 'show' || item.type === 'youtube'
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -17,24 +20,69 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
 
     const updates = {
       title: title.trim(),
-      url: item.type === 'link' && url.trim() ? url.trim() : null,
-      content: (item.type === 'text' || item.type === 'link') && content.trim() ? content.trim() : null,
       tags: tags.length > 0 ? tags : null,
+    }
+
+    if (item.type === 'link') {
+      updates.url = url.trim() || null
+      updates.content = content.trim() || null
+    } else if (item.type === 'text') {
+      updates.content = content.trim() || null
+    } else if (isWatchType) {
+      updates.type = mediaType
+      updates.url = url.trim() || null
+      updates.content = content.trim() || null
     }
 
     await onSave(item.id, updates)
     setLoading(false)
   }
 
+  function getEditTitle() {
+    if (item.type === 'link') return 'Link'
+    if (item.type === 'image') return 'Image'
+    if (item.type === 'movie') return 'Movie'
+    if (item.type === 'show') return 'TV Show'
+    if (item.type === 'youtube') return 'YouTube'
+    return 'Note'
+  }
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content edit-modal" onClick={e => e.stopPropagation()}>
         <div className="edit-header">
-          <h3>Edit {item.type === 'link' ? 'Link' : item.type === 'image' ? 'Image' : 'Note'}</h3>
+          <h3>Edit {getEditTitle()}</h3>
           <button className="close-btn" onClick={onClose}>×</button>
         </div>
 
         <form onSubmit={handleSubmit}>
+          {/* Media type toggle for Watch items */}
+          {isWatchType && (
+            <div className="media-type-toggle">
+              <button
+                type="button"
+                className={mediaType === 'movie' ? 'active' : ''}
+                onClick={() => setMediaType('movie')}
+              >
+                🎬 Movie
+              </button>
+              <button
+                type="button"
+                className={mediaType === 'show' ? 'active' : ''}
+                onClick={() => setMediaType('show')}
+              >
+                📺 TV Show
+              </button>
+              <button
+                type="button"
+                className={mediaType === 'youtube' ? 'active' : ''}
+                onClick={() => setMediaType('youtube')}
+              >
+                ▶️ YouTube
+              </button>
+            </div>
+          )}
+
           <label>
             <span>Title</span>
             <input
@@ -89,14 +137,42 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
             </div>
           )}
 
-          <label>
-            <span>Tags</span>
-            <TagInput
-              tags={tags}
-              onChange={setTags}
-              allTags={allTags}
-            />
-          </label>
+          {/* Watch item fields */}
+          {isWatchType && (
+            <>
+              {mediaType === 'youtube' && (
+                <label>
+                  <span>YouTube URL (optional)</span>
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://youtube.com/..."
+                  />
+                </label>
+              )}
+              <label>
+                <span>Notes</span>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Who recommended it, where to watch, etc."
+                  rows={3}
+                />
+              </label>
+            </>
+          )}
+
+          {!isWatchType && (
+            <label>
+              <span>Tags</span>
+              <TagInput
+                tags={tags}
+                onChange={setTags}
+                allTags={allTags}
+              />
+            </label>
+          )}
 
           <div className="form-actions">
             <button type="button" onClick={onClose}>Cancel</button>

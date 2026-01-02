@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { formatDate, getHostname, truncate } from '../utils'
 
@@ -9,10 +9,14 @@ export default function FolderItem({
   depth = 0,
   onCreateFolder,
   onDeleteFolder,
-  onDeleteItem
+  onDeleteItem,
+  onAddItem
 }) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [showCreateFolder, setShowCreateFolder] = useState(false)
+  const [subfolderName, setSubfolderName] = useState('')
+  const [isCreating, setIsCreating] = useState(false)
+  const inputRef = useRef(null)
 
   const { setNodeRef, isOver } = useDroppable({
     id: `folder-${folder.id}`,
@@ -48,6 +52,13 @@ export default function FolderItem({
         </span>
         <div className="folder-actions">
           <button
+            className="folder-action-btn add-note"
+            onClick={() => onAddItem && onAddItem(folder.id)}
+            title="Add note to folder"
+          >
+            📝
+          </button>
+          <button
             className="folder-action-btn"
             onClick={() => setShowCreateFolder(true)}
             title="Add subfolder"
@@ -77,6 +88,7 @@ export default function FolderItem({
               onCreateFolder={onCreateFolder}
               onDeleteFolder={onDeleteFolder}
               onDeleteItem={onDeleteItem}
+              onAddItem={onAddItem}
             />
           ))}
 
@@ -127,19 +139,57 @@ export default function FolderItem({
       {showCreateFolder && (
         <div className="inline-create-folder">
           <input
+            ref={inputRef}
             type="text"
             placeholder="Subfolder name"
+            value={subfolderName}
+            onChange={(e) => setSubfolderName(e.target.value)}
             autoFocus
+            disabled={isCreating}
             onKeyDown={async (e) => {
-              if (e.key === 'Enter' && e.target.value.trim()) {
-                await onCreateFolder(e.target.value.trim(), folder.id)
-                setShowCreateFolder(false)
+              if (e.key === 'Enter' && subfolderName.trim() && !isCreating) {
+                e.preventDefault()
+                setIsCreating(true)
+                try {
+                  await onCreateFolder(subfolderName.trim(), folder.id)
+                  setSubfolderName('')
+                  setShowCreateFolder(false)
+                } finally {
+                  setIsCreating(false)
+                }
               } else if (e.key === 'Escape') {
+                setSubfolderName('')
                 setShowCreateFolder(false)
               }
             }}
-            onBlur={() => setShowCreateFolder(false)}
+            onBlur={() => {
+              // Only close if not creating
+              if (!isCreating) {
+                setTimeout(() => {
+                  setSubfolderName('')
+                  setShowCreateFolder(false)
+                }, 150)
+              }
+            }}
           />
+          <button
+            className="create-subfolder-btn"
+            disabled={!subfolderName.trim() || isCreating}
+            onClick={async () => {
+              if (subfolderName.trim() && !isCreating) {
+                setIsCreating(true)
+                try {
+                  await onCreateFolder(subfolderName.trim(), folder.id)
+                  setSubfolderName('')
+                  setShowCreateFolder(false)
+                } finally {
+                  setIsCreating(false)
+                }
+              }
+            }}
+          >
+            {isCreating ? '...' : '✓'}
+          </button>
         </div>
       )}
     </div>

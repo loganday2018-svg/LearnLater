@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
-import { useDraggable } from '@dnd-kit/core'
+import { useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { formatDate, getHostname, truncate, vibrate } from '../utils'
 
-export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, selectionMode, isSelected, onToggleSelect }) {
+export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, selectionMode, isSelected, onToggleSelect, sortable = false }) {
   const [swipeX, setSwipeX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const [hintPlayed, setHintPlayed] = useState(false)
@@ -10,9 +11,17 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
   const startY = useRef(0)
   const cardRef = useRef(null)
 
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `item-${item.id}`,
-    data: { type: 'item', item }
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({
+    id: item.id,
+    data: { type: 'item', item },
+    disabled: !sortable
   })
 
   // Play swipe hint animation on first card
@@ -29,14 +38,21 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
     }
   }, [showHint, hintPlayed])
 
+  const sortableStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
   const style = {
-    transform: transform
-      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+    ...sortableStyle,
+    transform: isDragging
+      ? CSS.Transform.toString(transform)
       : swipeX !== 0
         ? `translateX(${swipeX}px)`
-        : undefined,
-    opacity: isDragging ? 0.5 : 1,
-    transition: isSwiping ? 'none' : 'transform 0.3s ease-out'
+        : sortableStyle.transform,
+    opacity: isDragging ? 0.7 : 1,
+    transition: isSwiping ? 'none' : transition || 'transform 0.3s ease-out',
+    zIndex: isDragging ? 100 : undefined,
   }
 
   const handleTouchStart = (e) => {

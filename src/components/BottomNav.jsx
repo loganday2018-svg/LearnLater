@@ -7,9 +7,17 @@ export default function BottomNav() {
         <span className="nav-icon">📥</span>
         <span className="nav-label">Inbox</span>
       </NavLink>
+      <NavLink to="/watch" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+        <span className="nav-icon">🎬</span>
+        <span className="nav-label">Watch</span>
+      </NavLink>
+      <NavLink to="/books" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
+        <span className="nav-icon">📖</span>
+        <span className="nav-label">Books</span>
+      </NavLink>
       <NavLink to="/library" className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}>
         <span className="nav-icon">📚</span>
-        <span className="nav-label">Library</span>
+        <span className="nav-label">Notes</span>
       </NavLink>
     </nav>
   )

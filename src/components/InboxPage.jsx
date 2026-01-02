@@ -1,11 +1,11 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import AddItem from './AddItem'
 import SwipeableItemCard from './SwipeableItemCard'
 import { vibrate } from '../utils'
 
-export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit }) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState('newest')
+export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit, onReorder }) {
+  const [sortBy, setSortBy] = useState('custom')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [pullDistance, setPullDistance] = useState(0)
   const [hasSeenHint, setHasSeenHint] = useState(() => {
@@ -81,31 +81,18 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
     }
   }, [hasSeenHint])
 
-  let inboxItems = items.filter(item => !item.folder_id)
-
-  if (searchQuery.trim()) {
-    const query = searchQuery.toLowerCase()
-    // Check if searching for a tag (starts with #)
-    const isTagSearch = query.startsWith('#')
-    const searchTerm = isTagSearch ? query.slice(1) : query
-
-    inboxItems = inboxItems.filter(item => {
-      if (isTagSearch) {
-        // Search only in tags
-        return item.tags?.some(tag => tag.toLowerCase().includes(searchTerm))
-      }
-      // Search in title, content, url, and tags
-      return (
-        item.title?.toLowerCase().includes(query) ||
-        item.content?.toLowerCase().includes(query) ||
-        item.url?.toLowerCase().includes(query) ||
-        item.tags?.some(tag => tag.toLowerCase().includes(query))
-      )
-    })
-  }
+  // Inbox only shows link, text, image types (not watch/book items)
+  const inboxTypes = ['link', 'text', 'image', 'checklist']
+  let inboxItems = items.filter(item => !item.folder_id && inboxTypes.includes(item.type))
 
   inboxItems = [...inboxItems].sort((a, b) => {
     switch (sortBy) {
+      case 'custom':
+        // Use sort_order if available, otherwise fall back to created_at
+        const orderA = a.sort_order ?? Number.MAX_SAFE_INTEGER
+        const orderB = b.sort_order ?? Number.MAX_SAFE_INTEGER
+        if (orderA !== orderB) return orderA - orderB
+        return new Date(b.created_at) - new Date(a.created_at)
       case 'oldest':
         return new Date(a.created_at) - new Date(b.created_at)
       case 'alpha':
@@ -117,6 +104,9 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
         return new Date(b.created_at) - new Date(a.created_at)
     }
   })
+
+  // Get IDs for SortableContext
+  const itemIds = inboxItems.map(item => item.id)
 
   const handlePullStart = useCallback((e) => {
     if (containerRef.current?.scrollTop === 0) {
@@ -169,18 +159,6 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
       <AddItem onAdd={onAdd} />
 
       <div className="controls-bar">
-        <div className="search-box">
-          <span className="search-icon">🔍</span>
-          <input
-            type="text"
-            placeholder="Search or #tag..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button className="clear-search" onClick={() => setSearchQuery('')}>×</button>
-          )}
-        </div>
         {!selectionMode ? (
           <>
             <select
@@ -188,6 +166,7 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
+              <option value="custom">Custom</option>
               <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
               <option value="alpha">A-Z</option>
@@ -215,36 +194,29 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
 
       {inboxItems.length === 0 ? (
         <div className="empty-state">
-          {searchQuery ? (
-            <>
-              <div className="empty-state-icon">🔍</div>
-              <h3>No matches found</h3>
-              <p>Try a different search term</p>
-            </>
-          ) : (
-            <>
-              <div className="empty-state-icon">📥</div>
-              <h3>Your inbox is empty</h3>
-              <p>Add links, notes, or images to save them for later.</p>
-              <p>Drag items to Library folders to organize them.</p>
-            </>
-          )}
+          <div className="empty-state-icon">📥</div>
+          <h3>Your inbox is empty</h3>
+          <p>Add links, notes, or images to save them for later.</p>
+          <p>Drag items to folders to organize them.</p>
         </div>
       ) : (
-        <div className="item-list">
-          {inboxItems.map((item, index) => (
-            <SwipeableItemCard
-              key={item.id}
-              item={item}
-              onDelete={onDelete}
-              onEdit={onEdit}
-              showHint={index === 0 && !hasSeenHint && !selectionMode}
-              selectionMode={selectionMode}
-              isSelected={selectedIds.has(item.id)}
-              onToggleSelect={toggleSelect}
-            />
-          ))}
-        </div>
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          <div className="item-list">
+            {inboxItems.map((item, index) => (
+              <SwipeableItemCard
+                key={item.id}
+                item={item}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                showHint={index === 0 && !hasSeenHint && !selectionMode}
+                selectionMode={selectionMode}
+                isSelected={selectedIds.has(item.id)}
+                onToggleSelect={toggleSelect}
+                sortable={sortBy === 'custom' && !selectionMode}
+              />
+            ))}
+          </div>
+        </SortableContext>
       )}
 
       {/* Selection Action Bar */}
