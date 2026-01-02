@@ -4,8 +4,8 @@ import MarkdownEditor from './MarkdownEditor'
 import TagInput from './TagInput'
 
 export default function AddItem({ onAdd, initialType = null, onClose, allTags = [] }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [type, setType] = useState('link')
+  const [isOpen, setIsOpen] = useState(!!initialType)
+  const [type, setType] = useState(initialType || 'link')
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [content, setContent] = useState('')
