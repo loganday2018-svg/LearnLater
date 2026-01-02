@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import { formatDate, getHostname, truncate } from '../utils'
 
@@ -14,14 +14,32 @@ export default function FolderItem({
 }) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [showCreateFolder, setShowCreateFolder] = useState(false)
+  const [showAddMenu, setShowAddMenu] = useState(false)
   const [subfolderName, setSubfolderName] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const inputRef = useRef(null)
+  const menuRef = useRef(null)
 
   const { setNodeRef, isOver } = useDroppable({
     id: `folder-${folder.id}`,
     data: { type: 'folder', folderId: folder.id }
   })
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!showAddMenu) return
+    function handleClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowAddMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('touchstart', handleClick)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('touchstart', handleClick)
+    }
+  }, [showAddMenu])
 
   // Get child folders
   const childFolders = allFolders
@@ -51,20 +69,37 @@ export default function FolderItem({
             : ''}
         </span>
         <div className="folder-actions">
-          <button
-            className="folder-action-btn add-note"
-            onClick={() => onAddItem && onAddItem(folder.id)}
-            title="Add note to folder"
-          >
-            📝
-          </button>
-          <button
-            className="folder-action-btn"
-            onClick={() => setShowCreateFolder(true)}
-            title="Add subfolder"
-          >
-            +
-          </button>
+          <div className="add-menu-container" ref={menuRef}>
+            <button
+              className="folder-action-btn"
+              onClick={() => setShowAddMenu(!showAddMenu)}
+              title="Add to folder"
+            >
+              +
+            </button>
+            {showAddMenu && (
+              <div className="add-menu-dropdown">
+                <button
+                  className="add-menu-item"
+                  onClick={() => {
+                    setShowAddMenu(false)
+                    onAddItem && onAddItem(folder.id)
+                  }}
+                >
+                  📝 Add Note
+                </button>
+                <button
+                  className="add-menu-item"
+                  onClick={() => {
+                    setShowAddMenu(false)
+                    setShowCreateFolder(true)
+                  }}
+                >
+                  📁 Add Subfolder
+                </button>
+              </div>
+            )}
+          </div>
           <button
             className="folder-action-btn delete"
             onClick={() => onDeleteFolder(folder.id)}

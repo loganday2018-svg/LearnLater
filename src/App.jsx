@@ -40,17 +40,16 @@ function App() {
     return Array.from(tagSet).sort()
   }, [items])
 
-  // Touch sensor with 300ms delay to prevent accidental drags
+  // Touch sensor - use distance instead of delay for snappier feel
   const touchSensor = useSensor(TouchSensor, {
     activationConstraint: {
-      delay: 300,
-      tolerance: 5
+      distance: 8,
     }
   })
 
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
-      distance: 10
+      distance: 8
     }
   })
 
