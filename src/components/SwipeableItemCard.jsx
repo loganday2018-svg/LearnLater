@@ -1,7 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
-import { useSortable } from '@dnd-kit/sortable'
+import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { formatDate, getHostname, truncate, vibrate } from '../utils'
+
+// Custom animation that's faster and smoother
+const animateLayoutChanges = (args) => {
+  const { isSorting, wasDragging } = args
+  if (isSorting || wasDragging) {
+    return defaultAnimateLayoutChanges(args)
+  }
+  return true
+}
 
 export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, selectionMode, isSelected, onToggleSelect, sortable = false }) {
   const [swipeX, setSwipeX] = useState(0)
@@ -17,11 +26,14 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
     setNodeRef,
     transform,
     transition,
-    isDragging
+    isDragging,
+    isSorting,
+    over
   } = useSortable({
     id: item.id,
     data: { type: 'item', item },
-    disabled: !sortable
+    disabled: !sortable,
+    animateLayoutChanges
   })
 
   // Play swipe hint animation on first card
@@ -38,22 +50,28 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
     }
   }, [showHint, hintPlayed])
 
-  const sortableStyle = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
+  // Smoother transition for sorting
+  const sortTransition = transition || 'transform 200ms cubic-bezier(0.25, 1, 0.5, 1)'
 
   const style = {
-    ...sortableStyle,
     transform: isDragging
       ? CSS.Transform.toString(transform)
       : swipeX !== 0
         ? `translateX(${swipeX}px)`
-        : sortableStyle.transform,
-    opacity: isDragging ? 0.7 : 1,
-    transition: isSwiping ? 'none' : transition || 'transform 0.3s ease-out',
-    zIndex: isDragging ? 100 : undefined,
+        : CSS.Transform.toString(transform),
+    transition: isSwiping ? 'none' : sortTransition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1000 : undefined,
+    // When being dragged over, show a subtle indicator
+    boxShadow: isDragging ? '0 12px 28px rgba(0, 122, 255, 0.35)' : undefined,
   }
+
+  // Haptic feedback when drag starts
+  useEffect(() => {
+    if (isDragging) {
+      vibrate(10)
+    }
+  }, [isDragging])
 
   const handleTouchStart = (e) => {
     if (e.target.closest('.drag-handle') || e.target.closest('.edit-btn')) return

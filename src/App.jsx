@@ -533,11 +533,23 @@ function App() {
         />
       )}
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={{
+        duration: 200,
+        easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
+      }}>
         {activeItem && (
           <div className={`item-card ${activeItem.type} dragging-overlay`}>
-            <span className="card-type">{activeItem.type === 'link' ? '🔗' : '📝'}</span>
-            <h3 className="card-title">{activeItem.title}</h3>
+            <div className="drag-handle dragging">
+              <span className="drag-icon">⋮⋮</span>
+            </div>
+            <div className="card-body">
+              <h3 className="card-title">{activeItem.title}</h3>
+              {activeItem.type === 'link' && activeItem.url && (
+                <p className="card-url" style={{ margin: 0, fontSize: '12px', color: '#666' }}>
+                  {new URL(activeItem.url).hostname}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </DragOverlay>
