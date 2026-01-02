@@ -81,10 +81,29 @@ export default function FolderItem({
               <div className="add-menu-dropdown">
                 <button
                   className="add-menu-item"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
                     console.log('Add Note clicked for folder:', folder.id, folder.name)
+                    console.log('onAddItem is:', typeof onAddItem)
                     setShowAddMenu(false)
-                    onAddItem && onAddItem(folder.id)
+                    if (onAddItem) {
+                      onAddItem(folder.id)
+                    } else {
+                      console.error('onAddItem is not defined!')
+                    }
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    console.log('Add Note touched for folder:', folder.id, folder.name)
+                    console.log('onAddItem is:', typeof onAddItem)
+                    setShowAddMenu(false)
+                    if (onAddItem) {
+                      onAddItem(folder.id)
+                    } else {
+                      console.error('onAddItem is not defined!')
+                    }
                   }}
                 >
                   📝 Add Note
