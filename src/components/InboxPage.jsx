@@ -1,8 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import AddItem from './AddItem'
 import SwipeableItemCard from './SwipeableItemCard'
-import { vibrate } from '../utils'
+import { vibrate, shareItems, formatInboxForShare } from '../utils'
 
 export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit, onReorder }) {
   const [sortBy, setSortBy] = useState('custom')
@@ -14,6 +13,7 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
   const [selectionMode, setSelectionMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [showFolderPicker, setShowFolderPicker] = useState(false)
+  const [shareToast, setShareToast] = useState(null)
   const containerRef = useRef(null)
   const startY = useRef(0)
   const isPulling = useRef(false)
@@ -82,6 +82,7 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
   }, [hasSeenHint])
 
   // Inbox only shows link, text, image types (not watch/book items)
+  // IMPORTANT: This must be defined before handleShare which uses it
   const inboxTypes = ['link', 'text', 'image', 'checklist']
   let inboxItems = items.filter(item => !item.folder_id && inboxTypes.includes(item.type))
 
@@ -104,6 +105,16 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
         return new Date(b.created_at) - new Date(a.created_at)
     }
   })
+
+  // handleShare must be defined AFTER inboxItems
+  const handleShare = useCallback(async () => {
+    vibrate(10)
+    const result = await shareItems('My Saved Items', inboxItems, formatInboxForShare)
+    if (result.success) {
+      setShareToast(result.method === 'share' ? 'Shared!' : 'Copied to clipboard!')
+      setTimeout(() => setShareToast(null), 2000)
+    }
+  }, [inboxItems])
 
   // Get IDs for SortableContext
   const itemIds = inboxItems.map(item => item.id)
@@ -173,16 +184,25 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
               <option value="type">Type</option>
             </select>
             {inboxItems.length > 0 && (
-              <button
-                className="select-mode-btn"
-                onClick={() => {
-                  vibrate(5)
-                  setSelectionMode(true)
-                }}
-                aria-label="Select items"
-              >
-                ☑
-              </button>
+              <>
+                <button
+                  className="share-btn"
+                  onClick={handleShare}
+                  aria-label="Share items"
+                >
+                  ↗
+                </button>
+                <button
+                  className="select-mode-btn"
+                  onClick={() => {
+                    vibrate(5)
+                    setSelectionMode(true)
+                  }}
+                  aria-label="Select items"
+                >
+                  ☑
+                </button>
+              </>
             )}
           </>
         ) : (
@@ -200,23 +220,21 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
           <p>Drag items to folders to organize them.</p>
         </div>
       ) : (
-        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-          <div className="item-list">
-            {inboxItems.map((item, index) => (
-              <SwipeableItemCard
-                key={item.id}
-                item={item}
-                onDelete={onDelete}
-                onEdit={onEdit}
-                showHint={index === 0 && !hasSeenHint && !selectionMode}
-                selectionMode={selectionMode}
-                isSelected={selectedIds.has(item.id)}
-                onToggleSelect={toggleSelect}
-                sortable={sortBy === 'custom' && !selectionMode}
-              />
-            ))}
-          </div>
-        </SortableContext>
+        <div className="item-list">
+          {inboxItems.map((item, index) => (
+            <SwipeableItemCard
+              key={item.id}
+              item={item}
+              onDelete={onDelete}
+              onEdit={onEdit}
+              showHint={index === 0 && !hasSeenHint && !selectionMode}
+              selectionMode={selectionMode}
+              isSelected={selectedIds.has(item.id)}
+              onToggleSelect={toggleSelect}
+              sortable={false}
+            />
+          ))}
+        </div>
       )}
 
       {/* Selection Action Bar */}
@@ -264,6 +282,11 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
             </div>
           </div>
         </div>
+      )}
+
+      {/* Share Toast */}
+      {shareToast && (
+        <div className="share-toast">{shareToast}</div>
       )}
     </div>
   )

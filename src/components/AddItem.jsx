@@ -16,12 +16,14 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
   const [fetchingPreview, setFetchingPreview] = useState(false)
   const [author, setAuthor] = useState('')
   const [readingStatus, setReadingStatus] = useState('want_to_read')
+  const [dueDate, setDueDate] = useState('')
   const isSubmitting = useRef(false)
   const fileInputRef = useRef(null)
 
   // Check if this is a watch type
   const isWatchType = type === 'movie' || type === 'show' || type === 'youtube'
   const isBookType = type === 'book'
+  const isInboxType = type === 'link' || type === 'text' || type === 'image' || type === 'checklist'
 
   // Handle opening from FAB with specific type
   useEffect(() => {
@@ -140,12 +142,15 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
         newItem.url = url.trim() || null
         newItem.content = content.trim() || null
         newItem.tags = tags.length > 0 ? tags : null
+        newItem.due_date = dueDate || null
       } else if (type === 'text' || type === 'checklist') {
         newItem.content = content.trim() || null
         newItem.tags = tags.length > 0 ? tags : null
+        newItem.due_date = dueDate || null
       } else if (type === 'image') {
         newItem.image_url = imageUrl
         newItem.tags = tags.length > 0 ? tags : null
+        newItem.due_date = dueDate || null
       } else if (isWatchType) {
         newItem.url = url.trim() || null
         newItem.content = content.trim() || null
@@ -179,6 +184,7 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
     setImagePreview(null)
     setAuthor('')
     setReadingStatus('want_to_read')
+    setDueDate('')
     setIsOpen(false)
     if (onClose) onClose()
   }
@@ -351,6 +357,30 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
             onChange={setTags}
             allTags={allTags}
           />
+        )}
+
+        {/* Due date for inbox items */}
+        {isInboxType && (
+          <div className="due-date-input">
+            <label>
+              <span className="due-date-label">📅 Due date</span>
+              <input
+                type="date"
+                value={dueDate}
+                onChange={(e) => setDueDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+              {dueDate && (
+                <button
+                  type="button"
+                  className="clear-date-btn"
+                  onClick={() => setDueDate('')}
+                >
+                  ×
+                </button>
+              )}
+            </label>
+          </div>
         )}
 
         <div className="form-actions">

@@ -8,9 +8,11 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
   const [content, setContent] = useState(item.content || '')
   const [tags, setTags] = useState(item.tags || [])
   const [mediaType, setMediaType] = useState(item.type || 'movie')
+  const [dueDate, setDueDate] = useState(item.due_date || '')
   const [loading, setLoading] = useState(false)
 
   const isWatchType = item.type === 'movie' || item.type === 'show' || item.type === 'youtube'
+  const isInboxType = item.type === 'link' || item.type === 'text' || item.type === 'image' || item.type === 'checklist'
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -21,6 +23,11 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
     const updates = {
       title: title.trim(),
       tags: tags.length > 0 ? tags : null,
+    }
+
+    // Add due_date for inbox items
+    if (isInboxType) {
+      updates.due_date = dueDate || null
     }
 
     if (item.type === 'link') {
@@ -172,6 +179,29 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
                 allTags={allTags}
               />
             </label>
+          )}
+
+          {/* Due date for inbox items */}
+          {isInboxType && (
+            <div className="due-date-input">
+              <label>
+                <span className="due-date-label">📅 Due date</span>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                />
+                {dueDate && (
+                  <button
+                    type="button"
+                    className="clear-date-btn"
+                    onClick={() => setDueDate('')}
+                  >
+                    ×
+                  </button>
+                )}
+              </label>
+            </div>
           )}
 
           <div className="form-actions">

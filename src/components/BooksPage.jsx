@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { supabase } from '../supabaseClient'
-import { vibrate } from '../utils'
+import { vibrate, shareItems, formatBooksForShare } from '../utils'
 
 export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
   const [filter, setFilter] = useState('all')
@@ -18,6 +18,7 @@ export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
   const [noteImage, setNoteImage] = useState(null)
   const [noteImagePreview, setNoteImagePreview] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [shareToast, setShareToast] = useState(null)
   const fileInputRef = useRef(null)
   const isSubmitting = useRef(false)
   const isAddingNote = useRef(false)
@@ -210,19 +211,42 @@ export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
     }
   }
 
+  async function handleShare() {
+    vibrate(10)
+    const allBooks = items.filter(item => item.type === 'book')
+    const result = await shareItems('Reading List', allBooks, formatBooksForShare)
+    if (result.success) {
+      setShareToast(result.method === 'share' ? 'Shared!' : 'Copied to clipboard!')
+      setTimeout(() => setShareToast(null), 2000)
+    }
+  }
+
+  const allBooks = items.filter(item => item.type === 'book')
+
   return (
     <div className="books-page">
       <div className="books-header">
         <h2>Books</h2>
-        <button
-          className="add-book-btn"
-          onClick={() => {
-            vibrate(5)
-            setShowAddForm(!showAddForm)
-          }}
-        >
-          {showAddForm ? '×' : '+'}
-        </button>
+        <div className="header-actions">
+          {allBooks.length > 0 && (
+            <button
+              className="share-btn"
+              onClick={handleShare}
+              aria-label="Share reading list"
+            >
+              ↗
+            </button>
+          )}
+          <button
+            className="add-book-btn"
+            onClick={() => {
+              vibrate(5)
+              setShowAddForm(!showAddForm)
+            }}
+          >
+            {showAddForm ? '×' : '+'}
+          </button>
+        </div>
       </div>
 
       {showAddForm && (
@@ -479,6 +503,11 @@ export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Share Toast */}
+      {shareToast && (
+        <div className="share-toast">{shareToast}</div>
       )}
     </div>
   )

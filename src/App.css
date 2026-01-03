@@ -1309,6 +1309,62 @@ body {
   object-fit: cover;
 }
 
+/* Share Button */
+.share-btn {
+  width: 44px;
+  height: 44px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.share-btn:active {
+  background: #007aff;
+  color: white;
+  border-color: #007aff;
+}
+
+/* Share Toast */
+.share-toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1d1d1f;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 1000;
+  animation: toast-in 0.3s ease-out;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Header Actions Container */
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 /* Selection Mode */
 .select-mode-btn {
   width: 44px;
@@ -1389,6 +1445,11 @@ body {
 .item-card.selected {
   background: #e8f4fd;
   box-shadow: 0 0 0 2px #007aff;
+}
+
+.item-card.overdue {
+  border-left: 3px solid #dc3545;
+  background: linear-gradient(to right, #fff5f5, white);
 }
 
 /* Selection Action Bar */
@@ -1834,6 +1895,75 @@ body {
 
 .tag-input::placeholder {
   color: #999;
+}
+
+/* Due Date Input */
+.due-date-input {
+  margin-top: 12px;
+}
+
+.due-date-input label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.due-date-label {
+  font-size: 14px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.due-date-input input[type="date"] {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 16px;
+  background: white;
+}
+
+.due-date-input input[type="date"]:focus {
+  outline: none;
+  border-color: #007aff;
+}
+
+.clear-date-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #f0f0f0;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  color: #666;
+}
+
+.clear-date-btn:hover {
+  background: #e0e0e0;
+}
+
+/* Due Date Badge on Cards */
+.due-date-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: #e8f4fd;
+  color: #007aff;
+}
+
+.due-date-badge.due-soon {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.due-date-badge.overdue {
+  background: #f8d7da;
+  color: #721c24;
 }
 
 .tag-suggestions {
@@ -2826,6 +2956,207 @@ body {
   margin: 0;
   font-size: 12px;
   color: #999;
+}
+
+/* Countdown Page */
+.countdown-page {
+  padding-bottom: 20px;
+}
+
+.countdown-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.countdown-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.add-countdown-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #007aff;
+  color: white;
+  border: none;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-countdown-btn:active {
+  transform: scale(0.95);
+  background: #0056b3;
+}
+
+.add-countdown-form {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.add-countdown-form input[type="text"] {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.datetime-inputs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.date-input-group,
+.time-input-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.datetime-inputs label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.datetime-inputs input {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.countdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.countdown-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  border-left: 4px solid #007aff;
+  transition: all 0.2s;
+}
+
+.countdown-card.soon {
+  border-left-color: #ff9500;
+  background: linear-gradient(to right, #fffbf5, white);
+}
+
+.countdown-card.very-soon {
+  border-left-color: #ff3b30;
+  background: linear-gradient(to right, #fff5f5, white);
+}
+
+.countdown-card.imminent {
+  border-left-color: #ff3b30;
+  background: linear-gradient(to right, #ffe5e5, white);
+  animation: pulse-bg 1s ease-in-out infinite alternate;
+}
+
+.countdown-card.passed {
+  border-left-color: #8e8e93;
+  opacity: 0.6;
+}
+
+@keyframes pulse-bg {
+  from {
+    background: linear-gradient(to right, #ffe5e5, white);
+  }
+  to {
+    background: linear-gradient(to right, #ffcccc, white);
+  }
+}
+
+.countdown-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.countdown-title {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.countdown-target {
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+}
+
+.countdown-display {
+  text-align: right;
+}
+
+.countdown-time {
+  font-size: 20px;
+  font-weight: 700;
+  color: #007aff;
+  white-space: nowrap;
+}
+
+.countdown-card.soon .countdown-time {
+  color: #ff9500;
+}
+
+.countdown-card.very-soon .countdown-time,
+.countdown-card.imminent .countdown-time {
+  color: #ff3b30;
+}
+
+.countdown-card.passed .countdown-time {
+  color: #8e8e93;
+  font-size: 14px;
+}
+
+.delete-countdown-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: #f0f0f0;
+  border-radius: 50%;
+  font-size: 16px;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+  transition: all 0.2s;
+}
+
+.delete-countdown-btn:hover,
+.delete-countdown-btn:active {
+  opacity: 1;
+  background: #ff3b30;
+  color: white;
 }
 
 /* Mobile optimizations */

@@ -12,6 +12,38 @@ const animateLayoutChanges = (args) => {
   return true
 }
 
+// Helper to get due date status and formatted text
+function getDueDateInfo(dueDate) {
+  if (!dueDate) return null
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const due = new Date(dueDate + 'T00:00:00')
+  const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24))
+
+  let status = 'normal'
+  let text = ''
+
+  if (diffDays < 0) {
+    status = 'overdue'
+    text = diffDays === -1 ? 'Yesterday' : `${Math.abs(diffDays)}d overdue`
+  } else if (diffDays === 0) {
+    status = 'due-soon'
+    text = 'Today'
+  } else if (diffDays === 1) {
+    status = 'due-soon'
+    text = 'Tomorrow'
+  } else if (diffDays <= 3) {
+    status = 'due-soon'
+    text = `In ${diffDays} days`
+  } else {
+    text = due.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  return { status, text }
+}
+
 export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, selectionMode, isSelected, onToggleSelect, sortable = false }) {
   const [swipeX, setSwipeX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
@@ -131,7 +163,7 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
       <div
         ref={cardRef}
         style={cardStyle}
-        className={`item-card ${item.type} ${isDragging ? 'dragging' : ''} ${isClickable ? 'clickable' : ''} ${isSelected ? 'selected' : ''}`}
+        className={`item-card ${item.type} ${isDragging ? 'dragging' : ''} ${isClickable ? 'clickable' : ''} ${isSelected ? 'selected' : ''} ${item.due_date && getDueDateInfo(item.due_date)?.status === 'overdue' ? 'overdue' : ''}`}
         onClick={handleCardClick}
         onTouchStart={selectionMode ? undefined : handleTouchStart}
         onTouchMove={selectionMode ? undefined : handleTouchMove}
@@ -160,6 +192,14 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
             <span className="card-type">
               {item.type === 'link' ? '🔗' : item.type === 'image' ? '🖼️' : '📝'}
             </span>
+            {item.due_date && (() => {
+              const dueDateInfo = getDueDateInfo(item.due_date)
+              return dueDateInfo && (
+                <span className={`due-date-badge ${dueDateInfo.status}`}>
+                  📅 {dueDateInfo.text}
+                </span>
+              )
+            })()}
             <span className="card-date">{formatDate(item.created_at)}</span>
           </div>
 

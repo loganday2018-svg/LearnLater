@@ -1,11 +1,20 @@
+import { useNavigate } from 'react-router-dom'
 import { vibrate } from '../utils'
 
 export default function MenuOverlay({ isOpen, onClose, onSignOut }) {
+  const navigate = useNavigate()
+
   if (!isOpen) return null
 
   function handleSignOut() {
     vibrate(10)
     onSignOut()
+    onClose()
+  }
+
+  function handleNavigate(path) {
+    vibrate(5)
+    navigate(path)
     onClose()
   }
 
@@ -18,6 +27,14 @@ export default function MenuOverlay({ isOpen, onClose, onSignOut }) {
         </div>
 
         <nav className="menu-nav">
+          <div className="menu-section">
+            <h3>Features</h3>
+            <button className="menu-item" onClick={() => handleNavigate('/countdowns')}>
+              <span className="menu-icon">⏱️</span>
+              <span>Countdowns</span>
+            </button>
+          </div>
+
           <div className="menu-section">
             <h3>Settings</h3>
             <button className="menu-item" onClick={handleSignOut}>

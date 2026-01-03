@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { vibrate } from '../utils'
+import { vibrate, shareItems, formatWatchListForShare } from '../utils'
 
 export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggleWatched }) {
   const [filter, setFilter] = useState('all') // all, unwatched, watched
@@ -10,6 +10,7 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
   const [url, setUrl] = useState('')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
+  const [shareToast, setShareToast] = useState(null)
 
   // Filter watch items (movies, shows, youtube)
   let watchItems = items.filter(item => item.type === 'movie' || item.type === 'show' || item.type === 'youtube')
@@ -70,19 +71,40 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
     onToggleWatched(item.id, !item.watched)
   }
 
+  async function handleShare() {
+    vibrate(10)
+    const allWatchItemsList = items.filter(item => item.type === 'movie' || item.type === 'show' || item.type === 'youtube')
+    const result = await shareItems('Watch List', allWatchItemsList, formatWatchListForShare)
+    if (result.success) {
+      setShareToast(result.method === 'share' ? 'Shared!' : 'Copied to clipboard!')
+      setTimeout(() => setShareToast(null), 2000)
+    }
+  }
+
   return (
     <div className="watchlist-page">
       <div className="watchlist-header">
         <h2>Watch List</h2>
-        <button
-          className="add-watch-btn"
-          onClick={() => {
-            vibrate(5)
-            setShowAddForm(!showAddForm)
-          }}
-        >
-          {showAddForm ? '×' : '+'}
-        </button>
+        <div className="header-actions">
+          {allWatchItems.length > 0 && (
+            <button
+              className="share-btn"
+              onClick={handleShare}
+              aria-label="Share watch list"
+            >
+              ↗
+            </button>
+          )}
+          <button
+            className="add-watch-btn"
+            onClick={() => {
+              vibrate(5)
+              setShowAddForm(!showAddForm)
+            }}
+          >
+            {showAddForm ? '×' : '+'}
+          </button>
+        </div>
       </div>
 
       {showAddForm && (
@@ -266,6 +288,11 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
             </div>
           ))}
         </div>
+      )}
+
+      {/* Share Toast */}
+      {shareToast && (
+        <div className="share-toast">{shareToast}</div>
       )}
     </div>
   )

@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { DndContext, TouchSensor, MouseSensor, useSensor, useSensors, DragOverlay, closestCenter } from '@dnd-kit/core'
-import { arrayMove } from '@dnd-kit/sortable'
+import { DndContext, TouchSensor, MouseSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
 import { supabase } from './supabaseClient'
 import Auth from './components/Auth'
 import BottomNav from './components/BottomNav'
@@ -13,6 +12,7 @@ import FloatingAddButton from './components/FloatingAddButton'
 import AddItem from './components/AddItem'
 import WatchListPage from './components/WatchListPage'
 import BooksPage from './components/BooksPage'
+import CountdownPage from './components/CountdownPage'
 import MenuOverlay from './components/MenuOverlay'
 import './App.css'
 
@@ -22,7 +22,6 @@ function App() {
   const [folders, setFolders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [activeItem, setActiveItem] = useState(null)
   const [toast, setToast] = useState(null)
   const [pendingDelete, setPendingDelete] = useState(null)
   const [editingItem, setEditingItem] = useState(null)
@@ -40,7 +39,7 @@ function App() {
     return Array.from(tagSet).sort()
   }, [items])
 
-  // Touch sensor - use distance instead of delay for snappier feel
+  // Touch sensor configuration
   const touchSensor = useSensor(TouchSensor, {
     activationConstraint: {
       distance: 8,
@@ -330,82 +329,6 @@ function App() {
     }
   }
 
-  async function reorderItems(activeId, overId) {
-    // Get inbox items only (same filter as InboxPage)
-    const inboxTypes = ['link', 'text', 'image', 'checklist']
-    const inboxItems = items.filter(item => !item.folder_id && inboxTypes.includes(item.type))
-
-    const oldIndex = inboxItems.findIndex(item => item.id === activeId)
-    const newIndex = inboxItems.findIndex(item => item.id === overId)
-
-    if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return
-
-    // Reorder locally
-    const reordered = arrayMove(inboxItems, oldIndex, newIndex)
-
-    // Assign new sort_order values
-    const updates = reordered.map((item, index) => ({
-      id: item.id,
-      sort_order: index
-    }))
-
-    // Update local state immediately
-    setItems(prev => {
-      const newItems = [...prev]
-      updates.forEach(update => {
-        const idx = newItems.findIndex(item => item.id === update.id)
-        if (idx !== -1) {
-          newItems[idx] = { ...newItems[idx], sort_order: update.sort_order }
-        }
-      })
-      return newItems
-    })
-
-    // Persist to database
-    try {
-      for (const update of updates) {
-        await supabase
-          .from('items')
-          .update({ sort_order: update.sort_order })
-          .eq('id', update.id)
-      }
-    } catch (err) {
-      console.error('Error saving order:', err)
-      // Don't show error - local reorder is good enough
-    }
-  }
-
-  function handleDragStart(event) {
-    const { active } = event
-    if (active.data.current?.type === 'item') {
-      setActiveItem(active.data.current.item)
-    }
-  }
-
-  function handleDragEnd(event) {
-    const { active, over } = event
-    setActiveItem(null)
-
-    if (!over) return
-
-    // Handle drag to folder
-    if (active.data.current?.type === 'item' && over.data.current?.type === 'folder') {
-      const itemId = active.data.current.item.id
-      const folderId = over.data.current.folderId
-      moveItemToFolder(itemId, folderId)
-      return
-    }
-
-    // Handle sortable reorder (item dropped on another item)
-    if (active.data.current?.type === 'item' && over.data.current?.type === 'item') {
-      const activeId = active.id
-      const overId = over.id
-      if (activeId !== overId) {
-        reorderItems(activeId, overId)
-      }
-    }
-  }
-
   async function handleSignOut() {
     await supabase.auth.signOut()
     setItems([])
@@ -421,12 +344,8 @@ function App() {
   }
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
+    <DndContext sensors={sensors} collisionDetection={closestCenter}>
+    <div className="app-wrapper">
       <div className="app">
         <header className="header">
           <h1>LearnLater</h1>
@@ -507,6 +426,16 @@ function App() {
               }
             />
             <Route
+              path="/countdowns"
+              element={
+                <CountdownPage
+                  items={items}
+                  onAdd={addItem}
+                  onDelete={deleteItem}
+                />
+              }
+            />
+            <Route
               path="/share"
               element={
                 <ShareHandler
@@ -533,27 +462,6 @@ function App() {
         />
       )}
 
-      <DragOverlay dropAnimation={{
-        duration: 200,
-        easing: 'cubic-bezier(0.25, 1, 0.5, 1)',
-      }}>
-        {activeItem && (
-          <div className={`item-card ${activeItem.type} dragging-overlay`}>
-            <div className="drag-handle dragging">
-              <span className="drag-icon">⋮⋮</span>
-            </div>
-            <div className="card-body">
-              <h3 className="card-title">{activeItem.title}</h3>
-              {activeItem.type === 'link' && activeItem.url && (
-                <p className="card-url" style={{ margin: 0, fontSize: '12px', color: '#666' }}>
-                  {new URL(activeItem.url).hostname}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-      </DragOverlay>
-
       {/* Undo Toast */}
       {toast && (
         <div className="toast">
@@ -578,9 +486,9 @@ function App() {
         onClose={() => setMenuOpen(false)}
         onSignOut={handleSignOut}
       />
+    </div>
     </DndContext>
   )
 }
 
 export default App
-// Force rebuild Fri Jan 2 2026 12:20 PM - dropdown menu for folder add
