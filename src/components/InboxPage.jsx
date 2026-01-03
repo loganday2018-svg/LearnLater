@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import AddItem from './AddItem'
 import SwipeableItemCard from './SwipeableItemCard'
 import { vibrate, shareItems, formatInboxForShare } from '../utils'
@@ -220,21 +221,23 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
           <p>Drag items to folders to organize them.</p>
         </div>
       ) : (
-        <div className="item-list">
-          {inboxItems.map((item, index) => (
-            <SwipeableItemCard
-              key={item.id}
-              item={item}
-              onDelete={onDelete}
-              onEdit={onEdit}
-              showHint={index === 0 && !hasSeenHint && !selectionMode}
-              selectionMode={selectionMode}
-              isSelected={selectedIds.has(item.id)}
-              onToggleSelect={toggleSelect}
-              sortable={false}
-            />
-          ))}
-        </div>
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          <div className="item-list">
+            {inboxItems.map((item, index) => (
+              <SwipeableItemCard
+                key={item.id}
+                item={item}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                showHint={index === 0 && !hasSeenHint && !selectionMode}
+                selectionMode={selectionMode}
+                isSelected={selectedIds.has(item.id)}
+                onToggleSelect={toggleSelect}
+                sortable={sortBy === 'custom' && !selectionMode}
+              />
+            ))}
+          </div>
+        </SortableContext>
       )}
 
       {/* Selection Action Bar */}

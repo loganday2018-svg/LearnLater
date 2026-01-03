@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { DndContext, TouchSensor, MouseSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core'
+import { DndContext, TouchSensor, MouseSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core'
+import { arrayMove } from '@dnd-kit/sortable'
 import { supabase } from './supabaseClient'
 import Auth from './components/Auth'
 import BottomNav from './components/BottomNav'
@@ -53,6 +54,53 @@ function App() {
   })
 
   const sensors = useSensors(touchSensor, mouseSensor)
+
+  // Handle drag end for reordering
+  async function handleDragEnd(event) {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    // Get inbox items (non-folder items)
+    const inboxTypes = ['link', 'text', 'image', 'checklist']
+    const inboxItems = items.filter(item => !item.folder_id && inboxTypes.includes(item.type))
+
+    const oldIndex = inboxItems.findIndex(item => item.id === active.id)
+    const newIndex = inboxItems.findIndex(item => item.id === over.id)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    // Reorder locally first
+    const reorderedInbox = arrayMove(inboxItems, oldIndex, newIndex)
+
+    // Update sort_order for all reordered items
+    const updatedItems = items.map(item => {
+      const newPosition = reorderedInbox.findIndex(i => i.id === item.id)
+      if (newPosition !== -1) {
+        return { ...item, sort_order: newPosition }
+      }
+      return item
+    })
+
+    setItems(updatedItems)
+
+    // Persist to database
+    try {
+      const updates = reorderedInbox.map((item, index) => ({
+        id: item.id,
+        sort_order: index
+      }))
+
+      for (const update of updates) {
+        await supabase
+          .from('items')
+          .update({ sort_order: update.sort_order })
+          .eq('id', update.id)
+      }
+    } catch (err) {
+      console.error('Error saving order:', err)
+    }
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -344,7 +392,7 @@ function App() {
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
     <div className="app-wrapper">
       <div className="app">
         <header className="header">
