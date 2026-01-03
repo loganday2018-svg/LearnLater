@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { DndContext, TouchSensor, MouseSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { supabase } from './supabaseClient'
+import { getNextDueDate } from './utils'
 import Auth from './components/Auth'
 import BottomNav from './components/BottomNav'
 import InboxPage from './components/InboxPage'
@@ -15,6 +16,7 @@ import WatchListPage from './components/WatchListPage'
 import BooksPage from './components/BooksPage'
 import CountdownPage from './components/CountdownPage'
 import MenuOverlay from './components/MenuOverlay'
+import SharedFolderPage from './components/SharedFolderPage'
 import './App.css'
 
 function App() {
@@ -269,6 +271,49 @@ function App() {
     }
   }
 
+  // Complete a recurring item - advances to next due date
+  async function completeItem(id) {
+    const item = items.find(i => i.id === id)
+    if (!item) return false
+
+    // If not recurring, just delete it
+    if (!item.recurrence_rule) {
+      deleteItem(id)
+      return true
+    }
+
+    // Calculate next due date
+    const nextDueDate = getNextDueDate(item.due_date, item.recurrence_rule)
+    if (!nextDueDate) {
+      deleteItem(id)
+      return true
+    }
+
+    // Update item with new due date
+    try {
+      const { data, error } = await supabase
+        .from('items')
+        .update({ due_date: nextDueDate })
+        .eq('id', id)
+        .select()
+
+      if (error) {
+        console.error('Error completing item:', error)
+        setError('Failed to complete item')
+        return false
+      }
+
+      setItems(items.map(i => i.id === id ? data[0] : i))
+      setToast({ message: `Next: ${new Date(nextDueDate).toLocaleDateString()}`, itemId: id })
+      setTimeout(() => setToast(null), 2000)
+      return true
+    } catch (err) {
+      console.error('Network error:', err)
+      setError('Network error - please try again')
+      return false
+    }
+  }
+
   async function createFolder(name, parentId = null) {
     try {
       const maxPosition = folders
@@ -335,6 +380,38 @@ function App() {
     }
   }
 
+  async function toggleFolderShare(id) {
+    const folder = folders.find(f => f.id === id)
+    if (!folder) return null
+
+    try {
+      // If making public, generate a share_id if not exists
+      const isPublic = !folder.is_public
+      const shareId = isPublic && !folder.share_id
+        ? Math.random().toString(36).substring(2, 10)
+        : folder.share_id
+
+      const { data, error } = await supabase
+        .from('folders')
+        .update({ is_public: isPublic, share_id: shareId })
+        .eq('id', id)
+        .select()
+
+      if (error) {
+        console.error('Error sharing folder:', error)
+        setError('Failed to share folder')
+        return null
+      }
+
+      setFolders(folders.map(f => f.id === id ? data[0] : f))
+      return data[0]
+    } catch (err) {
+      console.error('Network error:', err)
+      setError('Network error - please try again')
+      return null
+    }
+  }
+
   async function moveItemToFolder(itemId, folderId) {
     try {
       const { error } = await supabase
@@ -387,6 +464,20 @@ function App() {
     return <div className="loading">Loading...</div>
   }
 
+  // Allow shared folder view without authentication
+  const isSharedRoute = window.location.pathname.startsWith('/shared/')
+  if (isSharedRoute) {
+    return (
+      <div className="app-wrapper">
+        <div className="app shared-view">
+          <Routes>
+            <Route path="/shared/:shareId" element={<SharedFolderPage />} />
+          </Routes>
+        </div>
+      </div>
+    )
+  }
+
   if (!session) {
     return <Auth />
   }
@@ -431,6 +522,7 @@ function App() {
                   folders={folders}
                   onAdd={addItem}
                   onDelete={deleteItem}
+                  onComplete={completeItem}
                   onMoveToFolder={moveItemToFolder}
                   onRefresh={fetchItems}
                   onEdit={setEditingItem}
@@ -447,6 +539,7 @@ function App() {
                   onDeleteFolder={deleteFolder}
                   onDeleteItem={deleteItem}
                   onAddItem={addItem}
+                  onShareFolder={toggleFolderShare}
                 />
               }
             />

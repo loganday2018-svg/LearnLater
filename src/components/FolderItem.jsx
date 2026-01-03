@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { formatDate, getHostname, truncate } from '../utils'
+import { formatDate, getHostname, truncate, vibrate } from '../utils'
 
 export default function FolderItem({
   folder,
@@ -10,15 +10,39 @@ export default function FolderItem({
   onCreateFolder,
   onDeleteFolder,
   onDeleteItem,
-  onAddItem
+  onAddItem,
+  onShareFolder
 }) {
   const [isExpanded, setIsExpanded] = useState(true)
   const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [showAddMenu, setShowAddMenu] = useState(false)
   const [subfolderName, setSubfolderName] = useState('')
   const [isCreating, setIsCreating] = useState(false)
+  const [shareStatus, setShareStatus] = useState(null) // 'copying' | 'copied' | null
   const inputRef = useRef(null)
   const menuRef = useRef(null)
+
+  async function handleShare() {
+    vibrate(10)
+    setShareStatus('copying')
+
+    const result = await onShareFolder(folder.id)
+    if (result) {
+      const shareUrl = `${window.location.origin}/shared/${result.share_id}`
+
+      try {
+        await navigator.clipboard.writeText(shareUrl)
+        setShareStatus('copied')
+        setTimeout(() => setShareStatus(null), 2000)
+      } catch (e) {
+        // Fallback: show URL in prompt
+        prompt('Share link:', shareUrl)
+        setShareStatus(null)
+      }
+    } else {
+      setShareStatus(null)
+    }
+  }
 
   const { setNodeRef, isOver } = useDroppable({
     id: `folder-${folder.id}`,
@@ -69,6 +93,13 @@ export default function FolderItem({
             : ''}
         </span>
         <div className="folder-actions">
+          <button
+            className={`folder-action-btn share ${folder.is_public ? 'active' : ''} ${shareStatus ? shareStatus : ''}`}
+            onClick={handleShare}
+            title={folder.is_public ? 'Copy share link' : 'Share folder'}
+          >
+            {shareStatus === 'copied' ? '✓' : shareStatus === 'copying' ? '...' : '↗'}
+          </button>
           <div className="add-menu-container" ref={menuRef}>
             <button
               className="folder-action-btn"
@@ -124,6 +155,7 @@ export default function FolderItem({
               onDeleteFolder={onDeleteFolder}
               onDeleteItem={onDeleteItem}
               onAddItem={onAddItem}
+              onShareFolder={onShareFolder}
             />
           ))}
 

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSortable, defaultAnimateLayoutChanges } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { formatDate, getHostname, truncate, vibrate } from '../utils'
+import { formatDate, getHostname, truncate, vibrate, getRecurrenceText } from '../utils'
 
 // Custom animation that's faster and smoother
 const animateLayoutChanges = (args) => {
@@ -19,7 +19,20 @@ function getDueDateInfo(dueDate) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const due = new Date(dueDate + 'T00:00:00')
+  // Handle both date strings "2025-01-15" and timestamps "2025-01-15T00:00:00.000Z"
+  let due
+  if (dueDate.includes('T')) {
+    // Full ISO timestamp - parse directly
+    due = new Date(dueDate)
+  } else {
+    // Simple date string - add time to avoid timezone issues
+    due = new Date(dueDate + 'T00:00:00')
+  }
+
+  // Check for invalid date
+  if (isNaN(due.getTime())) return null
+
+  due.setHours(0, 0, 0, 0)
   const diffDays = Math.ceil((due - today) / (1000 * 60 * 60 * 24))
 
   let status = 'normal'
@@ -44,7 +57,7 @@ function getDueDateInfo(dueDate) {
   return { status, text }
 }
 
-export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, selectionMode, isSelected, onToggleSelect, sortable = false }) {
+export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, showHint, selectionMode, isSelected, onToggleSelect, sortable = false }) {
   const [swipeX, setSwipeX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const [hintPlayed, setHintPlayed] = useState(false)
@@ -194,9 +207,11 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
             </span>
             {item.due_date && (() => {
               const dueDateInfo = getDueDateInfo(item.due_date)
+              const recurrenceText = getRecurrenceText(item.recurrence_rule)
               return dueDateInfo && (
-                <span className={`due-date-badge ${dueDateInfo.status}`}>
+                <span className={`due-date-badge ${dueDateInfo.status} ${recurrenceText ? 'recurring' : ''}`}>
                   📅 {dueDateInfo.text}
+                  {recurrenceText && <span className="recurrence-indicator"> 🔄 {recurrenceText}</span>}
                 </span>
               )
             })()}
@@ -206,11 +221,20 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
           <h3 className="card-title">{truncate(item.title, 100)}</h3>
 
           {item.type === 'link' && item.url && (
-            <p className="card-url">{getHostname(item.url)}</p>
+            <p className="card-url">
+              {item.favicon && <img src={item.favicon} alt="" className="favicon" onError={(e) => e.target.style.display = 'none'} />}
+              {item.site_name || getHostname(item.url)}
+            </p>
           )}
 
-          {item.type === 'link' && item.content && (
-            <p className="card-notes">{truncate(item.content, 150)}</p>
+          {item.type === 'link' && item.image_url && (
+            <div className="card-preview-image">
+              <img src={item.image_url} alt="" onError={(e) => e.target.parentElement.style.display = 'none'} />
+            </div>
+          )}
+
+          {item.type === 'link' && (item.description || item.content) && (
+            <p className="card-notes">{truncate(item.description || item.content, 150)}</p>
           )}
 
           {item.type === 'text' && item.content && (
@@ -236,6 +260,20 @@ export default function SwipeableItemCard({ item, onDelete, onEdit, showHint, se
         </div>
 
         <div className="card-actions">
+          {item.due_date && onComplete && (
+            <button
+              className="complete-btn"
+              onClick={(e) => {
+                e.stopPropagation()
+                vibrate(10)
+                onComplete(item.id)
+              }}
+              aria-label={item.recurrence_rule ? "Complete and advance" : "Complete item"}
+              title={item.recurrence_rule ? "Complete & advance to next" : "Complete"}
+            >
+              ✓
+            </button>
+          )}
           <button
             className="edit-btn"
             onClick={(e) => {

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { supabase, edgeFunctionUrl } from '../supabaseClient'
 import MarkdownEditor from './MarkdownEditor'
 import TagInput from './TagInput'
+import RecurrenceSelector from './RecurrenceSelector'
 
 export default function AddItem({ onAdd, initialType = null, onClose, allTags = [] }) {
   const [isOpen, setIsOpen] = useState(!!initialType)
@@ -14,9 +15,11 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
   const [imagePreview, setImagePreview] = useState(null)
   const [loading, setLoading] = useState(false)
   const [fetchingPreview, setFetchingPreview] = useState(false)
+  const [previewData, setPreviewData] = useState(null)
   const [author, setAuthor] = useState('')
   const [readingStatus, setReadingStatus] = useState('want_to_read')
   const [dueDate, setDueDate] = useState('')
+  const [recurrence, setRecurrence] = useState(null)
   const isSubmitting = useRef(false)
   const fileInputRef = useRef(null)
 
@@ -44,7 +47,7 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
   }
 
   async function fetchLinkPreview(urlString) {
-    if (!urlString || !isValidUrl(urlString) || title.trim()) return
+    if (!urlString || !isValidUrl(urlString)) return
 
     setFetchingPreview(true)
     try {
@@ -56,6 +59,7 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
 
       if (response.ok) {
         const data = await response.json()
+        setPreviewData(data)
         if (data.title && !title.trim()) {
           setTitle(data.title)
         }
@@ -143,14 +147,24 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
         newItem.content = content.trim() || null
         newItem.tags = tags.length > 0 ? tags : null
         newItem.due_date = dueDate || null
+        newItem.recurrence_rule = recurrence || null
+        // Add preview data if available
+        if (previewData) {
+          newItem.image_url = previewData.image || null
+          newItem.description = previewData.description || null
+          newItem.site_name = previewData.siteName || null
+          newItem.favicon = previewData.favicon || null
+        }
       } else if (type === 'text' || type === 'checklist') {
         newItem.content = content.trim() || null
         newItem.tags = tags.length > 0 ? tags : null
         newItem.due_date = dueDate || null
+        newItem.recurrence_rule = recurrence || null
       } else if (type === 'image') {
         newItem.image_url = imageUrl
         newItem.tags = tags.length > 0 ? tags : null
         newItem.due_date = dueDate || null
+        newItem.recurrence_rule = recurrence || null
       } else if (isWatchType) {
         newItem.url = url.trim() || null
         newItem.content = content.trim() || null
@@ -182,9 +196,11 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
     setTags([])
     setImageFile(null)
     setImagePreview(null)
+    setPreviewData(null)
     setAuthor('')
     setReadingStatus('want_to_read')
     setDueDate('')
+    setRecurrence(null)
     setIsOpen(false)
     if (onClose) onClose()
   }
@@ -367,19 +383,32 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
               <input
                 type="date"
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
+                onChange={(e) => {
+                  setDueDate(e.target.value)
+                  // Clear recurrence if date is cleared
+                  if (!e.target.value) setRecurrence(null)
+                }}
                 min={new Date().toISOString().split('T')[0]}
               />
               {dueDate && (
                 <button
                   type="button"
                   className="clear-date-btn"
-                  onClick={() => setDueDate('')}
+                  onClick={() => {
+                    setDueDate('')
+                    setRecurrence(null)
+                  }}
                 >
                   ×
                 </button>
               )}
             </label>
+            {dueDate && (
+              <RecurrenceSelector
+                value={recurrence}
+                onChange={setRecurrence}
+              />
+            )}
           </div>
         )}
 

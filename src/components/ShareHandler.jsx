@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { fetchLinkPreview } from '../utils'
 
 export default function ShareHandler({ onAdd, isReady }) {
   const [searchParams] = useSearchParams()
@@ -22,9 +23,6 @@ export default function ShareHandler({ onAdd, isReady }) {
       }
     }
 
-    // Use text as title if no title provided
-    const finalTitle = title || text || finalUrl || 'Shared item'
-
     async function saveSharedItem() {
       if (!finalUrl && !text) {
         setStatus('error')
@@ -32,11 +30,27 @@ export default function ShareHandler({ onAdd, isReady }) {
         return
       }
 
-      const newItem = {
+      let newItem = {
         type: finalUrl ? 'link' : 'text',
-        title: finalTitle.substring(0, 200),
+        title: (title || text || finalUrl || 'Shared item').substring(0, 200),
         url: finalUrl || null,
         content: !finalUrl && text ? text : null,
+      }
+
+      // Fetch link preview if it's a URL
+      if (finalUrl) {
+        try {
+          const preview = await fetchLinkPreview(finalUrl)
+          if (preview) {
+            newItem.title = preview.title || newItem.title
+            newItem.description = preview.description || null
+            newItem.image_url = preview.image || null
+            newItem.site_name = preview.siteName || null
+            newItem.favicon = preview.favicon || null
+          }
+        } catch (e) {
+          console.log('Could not fetch preview:', e)
+        }
       }
 
       const success = await onAdd(newItem)

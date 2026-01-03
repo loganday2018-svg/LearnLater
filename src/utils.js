@@ -118,6 +118,110 @@ export function formatWatchListForShare(items) {
   return text
 }
 
+// Fetch link preview metadata
+export async function fetchLinkPreview(url) {
+  try {
+    const response = await fetch(
+      'https://lotzqnyejcnadoljgkvf.supabase.co/functions/v1/fetch-link-preview',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch preview')
+    }
+
+    return await response.json()
+  } catch (err) {
+    console.error('Link preview error:', err)
+    return null
+  }
+}
+
+// Calculate next due date based on recurrence rule
+export function getNextDueDate(currentDueDate, recurrenceRule) {
+  if (!recurrenceRule || !currentDueDate) return null
+
+  // Parse current date
+  let current
+  if (currentDueDate.includes('T')) {
+    current = new Date(currentDueDate)
+  } else {
+    current = new Date(currentDueDate + 'T00:00:00')
+  }
+
+  const { type, interval = 1, weekdays } = recurrenceRule
+
+  switch (type) {
+    case 'daily':
+      current.setDate(current.getDate() + interval)
+      break
+
+    case 'weekly':
+      if (weekdays && weekdays.length > 0) {
+        // Find next matching weekday
+        let found = false
+        for (let i = 1; i <= 7 * interval; i++) {
+          const checkDate = new Date(current)
+          checkDate.setDate(checkDate.getDate() + i)
+          if (weekdays.includes(checkDate.getDay())) {
+            current = checkDate
+            found = true
+            break
+          }
+        }
+        if (!found) {
+          current.setDate(current.getDate() + 7 * interval)
+        }
+      } else {
+        current.setDate(current.getDate() + 7 * interval)
+      }
+      break
+
+    case 'monthly':
+      current.setMonth(current.getMonth() + interval)
+      break
+
+    case 'yearly':
+      current.setFullYear(current.getFullYear() + interval)
+      break
+
+    default:
+      return null
+  }
+
+  // Return as YYYY-MM-DD string
+  return current.toISOString().split('T')[0]
+}
+
+// Get recurrence description text
+export function getRecurrenceText(recurrenceRule) {
+  if (!recurrenceRule) return null
+
+  const { type, interval = 1, weekdays } = recurrenceRule
+  const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+  switch (type) {
+    case 'daily':
+      return interval === 1 ? 'Daily' : `Every ${interval} days`
+    case 'weekly':
+      if (weekdays && weekdays.length > 0) {
+        const dayNames = weekdays.map(d => WEEKDAYS[d]).join(', ')
+        return interval === 1 ? `${dayNames}` : `Every ${interval} weeks (${dayNames})`
+      }
+      return interval === 1 ? 'Weekly' : `Every ${interval} weeks`
+    case 'monthly':
+      return interval === 1 ? 'Monthly' : `Every ${interval} months`
+    case 'yearly':
+      return interval === 1 ? 'Yearly' : `Every ${interval} years`
+    default:
+      return null
+  }
+}
+
 // Format books for sharing
 export function formatBooksForShare(items) {
   if (items.length === 0) return 'No books to share'

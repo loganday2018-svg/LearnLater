@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import MarkdownEditor from './MarkdownEditor'
 import TagInput from './TagInput'
+import RecurrenceSelector from './RecurrenceSelector'
 
 export default function EditItem({ item, onSave, onClose, allTags = [] }) {
   const [title, setTitle] = useState(item.title || '')
@@ -8,7 +9,16 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
   const [content, setContent] = useState(item.content || '')
   const [tags, setTags] = useState(item.tags || [])
   const [mediaType, setMediaType] = useState(item.type || 'movie')
-  const [dueDate, setDueDate] = useState(item.due_date || '')
+  // Extract date portion from timestamp if needed (input type="date" needs YYYY-MM-DD)
+  const [dueDate, setDueDate] = useState(() => {
+    if (!item.due_date) return ''
+    // If it's a full timestamp, extract just the date part
+    if (item.due_date.includes('T')) {
+      return item.due_date.split('T')[0]
+    }
+    return item.due_date
+  })
+  const [recurrence, setRecurrence] = useState(item.recurrence_rule || null)
   const [loading, setLoading] = useState(false)
 
   const isWatchType = item.type === 'movie' || item.type === 'show' || item.type === 'youtube'
@@ -25,9 +35,10 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
       tags: tags.length > 0 ? tags : null,
     }
 
-    // Add due_date for inbox items
+    // Add due_date and recurrence for inbox items
     if (isInboxType) {
       updates.due_date = dueDate || null
+      updates.recurrence_rule = recurrence || null
     }
 
     if (item.type === 'link') {
@@ -189,18 +200,30 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
                 <input
                   type="date"
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(e) => {
+                    setDueDate(e.target.value)
+                    if (!e.target.value) setRecurrence(null)
+                  }}
                 />
                 {dueDate && (
                   <button
                     type="button"
                     className="clear-date-btn"
-                    onClick={() => setDueDate('')}
+                    onClick={() => {
+                      setDueDate('')
+                      setRecurrence(null)
+                    }}
                   >
                     ×
                   </button>
                 )}
               </label>
+              {dueDate && (
+                <RecurrenceSelector
+                  value={recurrence}
+                  onChange={setRecurrence}
+                />
+              )}
             </div>
           )}
 

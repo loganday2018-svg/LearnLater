@@ -4,7 +4,7 @@ import AddItem from './AddItem'
 import SwipeableItemCard from './SwipeableItemCard'
 import { vibrate, shareItems, formatInboxForShare } from '../utils'
 
-export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit, onReorder }) {
+export default function InboxPage({ items, folders, onAdd, onDelete, onComplete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit, onReorder }) {
   const [sortBy, setSortBy] = useState('custom')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [pullDistance, setPullDistance] = useState(0)
@@ -228,6 +228,7 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onDeleteMul
                 key={item.id}
                 item={item}
                 onDelete={onDelete}
+                onComplete={onComplete}
                 onEdit={onEdit}
                 showHint={index === 0 && !hasSeenHint && !selectionMode}
                 selectionMode={selectionMode}

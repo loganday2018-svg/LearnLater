@@ -23,7 +23,8 @@ export default function LibraryPage({
   onCreateFolder,
   onDeleteFolder,
   onDeleteItem,
-  onAddItem
+  onAddItem,
+  onShareFolder
 }) {
   const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [addToFolderId, setAddToFolderId] = useState(null)
@@ -66,6 +67,7 @@ export default function LibraryPage({
                 onDeleteFolder={onDeleteFolder}
                 onDeleteItem={onDeleteItem}
                 onAddItem={setAddToFolderId}
+                onShareFolder={onShareFolder}
               />
             ))}
           </div>
