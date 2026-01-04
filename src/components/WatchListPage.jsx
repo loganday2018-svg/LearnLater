@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { vibrate, shareItems, formatWatchListForShare } from '../utils'
 
 export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggleWatched }) {
-  const [typeFilter, setTypeFilter] = useState('all') // all, youtube, movies, other
+  const [typeFilter, setTypeFilter] = useState('youtube') // youtube, movies
   const [showAddForm, setShowAddForm] = useState(false)
   const [mediaType, setMediaType] = useState('movie')
   const [title, setTitle] = useState('')
@@ -164,10 +164,10 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
       {/* Type filters */}
       <div className="watchlist-filters type-filters">
         <button
-          className={typeFilter === 'all' ? 'active' : ''}
-          onClick={() => setTypeFilter('all')}
+          className={typeFilter === 'youtube' ? 'active' : ''}
+          onClick={() => setTypeFilter('youtube')}
         >
-          All ({allWatchItems.length})
+          ▶️ YouTube ({youtubeCount})
         </button>
         <button
           className={typeFilter === 'movies' ? 'active' : ''}
@@ -175,19 +175,13 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
         >
           🎬 Movies/Shows ({moviesCount})
         </button>
-        <button
-          className={typeFilter === 'youtube' ? 'active' : ''}
-          onClick={() => setTypeFilter('youtube')}
-        >
-          ▶️ YouTube ({youtubeCount})
-        </button>
       </div>
 
       {watchItems.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">🎬</div>
-          <h3>No movies or shows yet</h3>
-          <p>Add movies and TV shows you want to watch!</p>
+          <div className="empty-state-icon">{typeFilter === 'youtube' ? '▶️' : '🎬'}</div>
+          <h3>No {typeFilter === 'youtube' ? 'YouTube videos' : 'movies or shows'} yet</h3>
+          <p>Add {typeFilter === 'youtube' ? 'videos' : 'movies and TV shows'} you want to watch!</p>
         </div>
       ) : (
         <div className="watchlist-items">
