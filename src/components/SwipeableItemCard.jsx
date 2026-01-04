@@ -57,13 +57,19 @@ function getDueDateInfo(dueDate) {
   return { status, text }
 }
 
-export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, showHint, selectionMode, isSelected, onToggleSelect, sortable = false }) {
+export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, showHint, selectionMode, isSelected, onToggleSelect, sortable = false, isCompact = false, pendingDeleteId = null }) {
   const [swipeX, setSwipeX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const [hintPlayed, setHintPlayed] = useState(false)
   const startX = useRef(0)
   const startY = useRef(0)
   const cardRef = useRef(null)
+
+  // Check if this item is pending deletion
+  const isPendingDelete = pendingDeleteId === item.id
+
+  // Swipe right completes items with due dates, deletes items without
+  const hasRightAction = item.due_date && onComplete
 
   const {
     attributes,
@@ -114,18 +120,32 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
     const deltaX = e.touches[0].clientX - startX.current
     const deltaY = e.touches[0].clientY - startY.current
 
-    if (Math.abs(deltaX) > Math.abs(deltaY) && deltaX < 0) {
-      e.preventDefault()
-      setSwipeX(Math.max(deltaX, -100))
+    // Allow swipe left (delete) always, swipe right (complete) if item has due date
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (deltaX < 0) {
+        // Swipe left - delete
+        e.preventDefault()
+        setSwipeX(Math.max(deltaX, -100))
+      } else if (hasRightAction && deltaX > 0) {
+        // Swipe right - complete (only for items with due dates)
+        e.preventDefault()
+        setSwipeX(Math.min(deltaX, 100))
+      }
     }
   }
 
   const handleTouchEnd = () => {
     setIsSwiping(false)
     if (swipeX < -70) {
+      // Swipe left - delete
       vibrate(15)
       setSwipeX(-window.innerWidth)
       setTimeout(() => onDelete(item.id), 200)
+    } else if (swipeX > 70 && hasRightAction) {
+      // Swipe right - complete
+      vibrate([10, 50, 10])
+      setSwipeX(window.innerWidth)
+      setTimeout(() => onComplete(item.id), 200)
     } else {
       setSwipeX(0)
     }
@@ -168,15 +188,20 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
     <div
       ref={setNodeRef}
       style={containerStyle}
-      className={`swipe-container ${isDragging ? 'is-dragging' : ''}`}
+      className={`swipe-container ${isDragging ? 'is-dragging' : ''} ${isPendingDelete ? 'pending-delete' : ''}`}
     >
+      {hasRightAction && (
+        <div className="swipe-action complete-action">
+          <span>Complete</span>
+        </div>
+      )}
       <div className="swipe-action delete-action">
         <span>Delete</span>
       </div>
       <div
         ref={cardRef}
         style={cardStyle}
-        className={`item-card ${item.type} ${isDragging ? 'dragging' : ''} ${isClickable ? 'clickable' : ''} ${isSelected ? 'selected' : ''} ${item.due_date && getDueDateInfo(item.due_date)?.status === 'overdue' ? 'overdue' : ''}`}
+        className={`item-card ${item.type} ${isDragging ? 'dragging' : ''} ${isClickable ? 'clickable' : ''} ${isSelected ? 'selected' : ''} ${item.due_date && getDueDateInfo(item.due_date)?.status === 'overdue' ? 'overdue' : ''} ${isCompact ? 'compact' : ''}`}
         onClick={handleCardClick}
         onTouchStart={selectionMode ? undefined : handleTouchStart}
         onTouchMove={selectionMode ? undefined : handleTouchMove}

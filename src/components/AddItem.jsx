@@ -1,16 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { supabase, edgeFunctionUrl } from '../supabaseClient'
 import MarkdownEditor from './MarkdownEditor'
-import TagInput from './TagInput'
 import RecurrenceSelector from './RecurrenceSelector'
 
-export default function AddItem({ onAdd, initialType = null, onClose, allTags = [] }) {
+export default function AddItem({ onAdd, initialType = null, onClose }) {
   const [isOpen, setIsOpen] = useState(!!initialType)
   const [type, setType] = useState(initialType || 'link')
   const [title, setTitle] = useState('')
   const [url, setUrl] = useState('')
   const [content, setContent] = useState('')
-  const [tags, setTags] = useState([])
   const [imageFile, setImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -145,7 +143,6 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
       if (type === 'link') {
         newItem.url = url.trim() || null
         newItem.content = content.trim() || null
-        newItem.tags = tags.length > 0 ? tags : null
         newItem.due_date = dueDate || null
         newItem.recurrence_rule = recurrence || null
         // Add preview data if available
@@ -157,12 +154,10 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
         }
       } else if (type === 'text' || type === 'checklist') {
         newItem.content = content.trim() || null
-        newItem.tags = tags.length > 0 ? tags : null
         newItem.due_date = dueDate || null
         newItem.recurrence_rule = recurrence || null
       } else if (type === 'image') {
         newItem.image_url = imageUrl
-        newItem.tags = tags.length > 0 ? tags : null
         newItem.due_date = dueDate || null
         newItem.recurrence_rule = recurrence || null
       } else if (isWatchType) {
@@ -193,7 +188,6 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
     setTitle('')
     setUrl('')
     setContent('')
-    setTags([])
     setImageFile(null)
     setImagePreview(null)
     setPreviewData(null)
@@ -364,15 +358,6 @@ export default function AddItem({ onAdd, initialType = null, onClose, allTags = 
               </select>
             </div>
           </>
-        )}
-
-        {/* Tags only for non-watch/non-book types */}
-        {!isWatchType && !isBookType && (
-          <TagInput
-            tags={tags}
-            onChange={setTags}
-            allTags={allTags}
-          />
         )}
 
         {/* Due date for inbox items */}

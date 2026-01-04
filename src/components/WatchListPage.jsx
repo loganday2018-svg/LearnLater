@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { vibrate, shareItems, formatWatchListForShare } from '../utils'
 
 export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggleWatched }) {
-  const [filter, setFilter] = useState('all') // all, unwatched, watched
   const [typeFilter, setTypeFilter] = useState('all') // all, youtube, movies, other
   const [showAddForm, setShowAddForm] = useState(false)
   const [mediaType, setMediaType] = useState('movie')
@@ -20,13 +19,6 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
     watchItems = watchItems.filter(item => item.type === 'youtube')
   } else if (typeFilter === 'movies') {
     watchItems = watchItems.filter(item => item.type === 'movie' || item.type === 'show')
-  }
-
-  // Apply watched filter
-  if (filter === 'unwatched') {
-    watchItems = watchItems.filter(item => !item.watched)
-  } else if (filter === 'watched') {
-    watchItems = watchItems.filter(item => item.watched)
   }
 
   // Count by type for filter badges
@@ -191,45 +183,11 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
         </button>
       </div>
 
-      {/* Watched status filters */}
-      <div className="watchlist-filters">
-        <button
-          className={filter === 'all' ? 'active' : ''}
-          onClick={() => setFilter('all')}
-        >
-          All
-        </button>
-        <button
-          className={filter === 'unwatched' ? 'active' : ''}
-          onClick={() => setFilter('unwatched')}
-        >
-          To Watch
-        </button>
-        <button
-          className={filter === 'watched' ? 'active' : ''}
-          onClick={() => setFilter('watched')}
-        >
-          Watched
-        </button>
-      </div>
-
       {watchItems.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">🎬</div>
-          <h3>
-            {filter === 'all'
-              ? 'No movies or shows yet'
-              : filter === 'unwatched'
-                ? 'Nothing to watch'
-                : 'Nothing watched yet'}
-          </h3>
-          <p>
-            {filter === 'all'
-              ? 'Add movies and TV shows you want to watch with your wife!'
-              : filter === 'unwatched'
-                ? 'All caught up! Add something new.'
-                : 'Mark items as watched when you finish them.'}
-          </p>
+          <h3>No movies or shows yet</h3>
+          <p>Add movies and TV shows you want to watch!</p>
         </div>
       ) : (
         <div className="watchlist-items">

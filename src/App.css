@@ -2045,135 +2045,127 @@ body {
   opacity: 0.85;
 }
 
-/* Recurrence Selector */
-.recurrence-selector {
-  margin-top: 8px;
-  position: relative;
+/* Recurrence Selector v2 */
+.recurrence-selector-v2 {
+  margin-top: 12px;
 }
 
-.recurrence-trigger {
-  width: 100%;
+.recurrence-selector-v2.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.recurrence-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toggle-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 10px 14px;
   background: #f8f8f8;
   border: 1px solid #e0e0e0;
   border-radius: 10px;
-  font-size: 14px;
-  text-align: left;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.recurrence-trigger:hover:not(:disabled) {
+.toggle-option:hover {
   background: #f0f0f0;
 }
 
-.recurrence-trigger.active {
+.toggle-option.active {
   background: #e8f4fd;
   border-color: #007aff;
-  color: #007aff;
 }
 
-.recurrence-trigger:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.recurrence-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 4px;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-  z-index: 100;
-  overflow: hidden;
-}
-
-.recurrence-options {
-  padding: 8px;
-}
-
-.recurrence-option {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.recurrence-option:hover {
-  background: #f5f5f5;
-}
-
-.recurrence-option input[type="radio"] {
+.toggle-option input[type="radio"] {
   margin: 0;
   width: 18px;
   height: 18px;
   accent-color: #007aff;
 }
 
-.recurrence-option span {
+.toggle-label {
   font-size: 14px;
+  color: #333;
 }
 
-.recurrence-details {
-  padding: 12px 16px;
-  border-top: 1px solid #eee;
-  background: #fafafa;
+.toggle-option.active .toggle-label {
+  color: #007aff;
+  font-weight: 500;
 }
 
-.interval-selector {
+.recurrence-config {
+  margin-top: 12px;
+  padding: 14px;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.interval-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 10px;
 }
 
-.interval-selector label {
-  font-size: 13px;
+.interval-label {
+  font-size: 14px;
   color: #666;
 }
 
-.interval-selector input[type="number"] {
+.interval-input {
   width: 60px;
-  padding: 8px;
+  padding: 8px 10px;
   border: 1px solid #ddd;
   border-radius: 8px;
   font-size: 14px;
   text-align: center;
+  background: white;
 }
 
-.interval-selector span {
-  font-size: 13px;
-  color: #666;
+.interval-input:focus {
+  outline: none;
+  border-color: #007aff;
 }
 
-.weekday-selector {
+.unit-select {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.unit-select:focus {
+  outline: none;
+  border-color: #007aff;
+}
+
+.weekday-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.weekday-grid {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.weekday-selector > label {
-  font-size: 13px;
-  color: #666;
-}
-
-.weekday-buttons {
-  display: flex;
-  gap: 4px;
+  gap: 6px;
+  justify-content: space-between;
 }
 
 .weekday-btn {
-  width: 36px;
+  flex: 1;
+  min-width: 36px;
   height: 36px;
   border: 1px solid #ddd;
-  border-radius: 50%;
+  border-radius: 8px;
   background: white;
   font-size: 12px;
   font-weight: 500;
@@ -2183,6 +2175,7 @@ body {
 
 .weekday-btn:hover {
   border-color: #007aff;
+  background: #f0f7ff;
 }
 
 .weekday-btn.active {
@@ -2191,20 +2184,9 @@ body {
   color: white;
 }
 
-.recurrence-done {
-  width: 100%;
-  padding: 12px;
-  background: #007aff;
-  color: white;
-  border: none;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.recurrence-done:hover {
-  background: #0063d1;
+.weekday-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .tag-suggestions {
@@ -3594,4 +3576,238 @@ body {
 .shared-footer a {
   color: #007aff;
   text-decoration: none;
+}
+
+/* ====================== */
+/* Quick Add Inline       */
+/* ====================== */
+.quick-add {
+  padding: 12px 16px;
+  background: white;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.quick-add form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.quick-add input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 16px;
+  background: #f8f8f8;
+  transition: all 0.2s;
+}
+
+.quick-add input:focus {
+  outline: none;
+  border-color: #007aff;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+.quick-add-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: #007aff;
+  color: white;
+  font-size: 24px;
+  font-weight: 300;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.quick-add-btn:active {
+  transform: scale(0.95);
+  background: #0056b3;
+}
+
+.quick-add-btn:disabled {
+  opacity: 0.6;
+}
+
+.quick-add-hint {
+  font-size: 12px;
+  color: #666;
+  margin-top: 6px;
+  padding-left: 4px;
+}
+
+/* ====================== */
+/* Compact Toggle Button  */
+/* ====================== */
+.compact-toggle-btn {
+  padding: 6px 10px;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-left: 4px;
+  transition: all 0.15s;
+}
+
+.compact-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+.compact-toggle-btn.active {
+  background: #007aff;
+  color: white;
+}
+
+/* ====================== */
+/* Undo Toast             */
+/* ====================== */
+.undo-toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  animation: slideUp 0.2s ease-out;
+  max-width: calc(100% - 40px);
+}
+
+.undo-toast span {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.undo-toast button {
+  background: none;
+  border: none;
+  color: #4cd964;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin: -4px -8px;
+  flex-shrink: 0;
+}
+
+.undo-toast button:active {
+  opacity: 0.7;
+}
+
+/* ====================== */
+/* Compact Mode Cards     */
+/* ====================== */
+.item-card.compact {
+  padding: 10px 12px;
+}
+
+.item-card.compact .card-body {
+  gap: 4px;
+}
+
+.item-card.compact .card-header {
+  margin-bottom: 2px;
+}
+
+.item-card.compact .card-title {
+  font-size: 15px;
+  line-height: 1.3;
+  margin-bottom: 0;
+}
+
+.item-card.compact .card-url,
+.item-card.compact .card-notes,
+.item-card.compact .card-content,
+.item-card.compact .card-preview-image,
+.item-card.compact .card-image,
+.item-card.compact .card-tags {
+  display: none;
+}
+
+.item-card.compact .card-actions {
+  gap: 6px;
+}
+
+.item-card.compact .edit-btn,
+.item-card.compact .delete-btn,
+.item-card.compact .complete-btn {
+  width: 28px;
+  height: 28px;
+  font-size: 14px;
+}
+
+/* ====================== */
+/* Pending Delete State   */
+/* ====================== */
+.swipe-container.pending-delete {
+  opacity: 0.4;
+  transform: scale(0.98);
+  transition: all 0.2s ease-out;
+}
+
+.swipe-container.pending-delete .item-card {
+  pointer-events: none;
+}
+
+/* ====================== */
+/* Swipe Complete Action  */
+/* ====================== */
+.swipe-action.complete-action {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100px;
+  background: #4cd964;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 20px;
+  color: white;
+  font-weight: 600;
+  border-radius: 16px 0 0 16px;
+}
+
+/* ====================== */
+/* Enhanced Overdue Style */
+/* ====================== */
+.item-card.overdue {
+  border-left: 4px solid #dc3545;
+  background: linear-gradient(to right, #fff0f0, white);
+  box-shadow: 0 2px 12px rgba(220, 53, 69, 0.15);
+}
+
+.item-card.overdue .card-title {
+  color: #c82333;
+}
+
+.item-card.overdue .due-date-badge.overdue {
+  background: #dc3545;
+  color: white;
+  animation: pulse-overdue 2s infinite;
+}
+
+@keyframes pulse-overdue {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
