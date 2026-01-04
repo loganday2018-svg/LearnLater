@@ -3960,3 +3960,200 @@ body {
     padding: 0;
   }
 }
+
+/* ==================== */
+/* Projects Page Styles */
+/* ==================== */
+
+.projects-page {
+  padding-bottom: 20px;
+}
+
+.projects-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.projects-header h2 {
+  font-size: 1.3rem;
+  color: #1d1d1f;
+}
+
+.add-project-btn {
+  width: 40px;
+  height: 40px;
+  background: #007aff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.add-project-btn:active {
+  transform: scale(0.95);
+}
+
+/* Add Project Form */
+.add-project-form {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.category-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+.category-toggle button {
+  flex: 1;
+  padding: 10px;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.category-toggle button.active {
+  background: #007aff;
+  color: white;
+}
+
+.add-project-form input,
+.add-project-form textarea {
+  padding: 12px 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.add-project-form input:focus,
+.add-project-form textarea:focus {
+  outline: none;
+  border-color: #007aff;
+}
+
+/* Projects Filters */
+.projects-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.projects-filters button {
+  flex: 1;
+  padding: 10px 12px;
+  background: #f0f0f0;
+  border: none;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.projects-filters button.active {
+  background: #007aff;
+  color: white;
+}
+
+/* Projects List */
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s;
+}
+
+.project-card.completed {
+  opacity: 0.6;
+  background: #f8f8f8;
+}
+
+.project-toggle {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  background: #f0f0f0;
+  border: 2px solid #ddd;
+  border-radius: 50%;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: #666;
+}
+
+.project-card.completed .project-toggle {
+  background: #34c759;
+  border-color: #34c759;
+  color: white;
+}
+
+.project-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-content h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 4px;
+}
+
+.project-content h3.strikethrough {
+  text-decoration: line-through;
+  color: #888;
+}
+
+.project-description {
+  font-size: 0.9rem;
+  color: #666;
+  line-height: 1.4;
+}
+
+.project-card .delete-btn {
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #999;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.project-card .delete-btn:active {
+  color: #ff3b30;
+}

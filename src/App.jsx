@@ -14,6 +14,7 @@ import FloatingAddButton from './components/FloatingAddButton'
 import AddItem from './components/AddItem'
 import WatchListPage from './components/WatchListPage'
 import BooksPage from './components/BooksPage'
+import ProjectsPage from './components/ProjectsPage'
 import CountdownPage from './components/CountdownPage'
 import MenuOverlay from './components/MenuOverlay'
 import SharedFolderPage from './components/SharedFolderPage'
@@ -552,6 +553,17 @@ function App() {
                   onDelete={deleteItem}
                   onEdit={setEditingItem}
                   onToggleWatched={toggleWatched}
+                />
+              }
+            />
+            <Route
+              path="/projects"
+              element={
+                <ProjectsPage
+                  items={items}
+                  onAdd={addItem}
+                  onDelete={deleteItem}
+                  onUpdate={updateItem}
                 />
               }
             />
