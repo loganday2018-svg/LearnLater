@@ -4,6 +4,7 @@ import QuickAdd from './QuickAdd'
 import SwipeableItemCard from './SwipeableItemCard'
 import SkeletonCard from './SkeletonCard'
 import { vibrate, shareItems, formatInboxForShare } from '../utils'
+import useUndoDelete from '../hooks/useUndoDelete'
 
 export default function InboxPage({ items, folders, onAdd, onDelete, onComplete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit, onReorder, isLoading }) {
   const [sortBy, setSortBy] = useState('custom')
@@ -19,11 +20,15 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [showFolderPicker, setShowFolderPicker] = useState(false)
   const [shareToast, setShareToast] = useState(null)
-  const [pendingDelete, setPendingDelete] = useState(null)
-  const pendingDeleteTimer = useRef(null)
   const containerRef = useRef(null)
   const startY = useRef(0)
   const isPulling = useRef(false)
+
+  const {
+    pendingDelete,
+    handleDeleteWithUndo,
+    handleUndoDelete
+  } = useUndoDelete(items, onDelete)
 
   // Handle compact mode toggle
   const toggleCompact = useCallback(() => {
@@ -32,47 +37,6 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
       localStorage.setItem('learnlater-compact-mode', next.toString())
       return next
     })
-  }, [])
-
-  // Handle delete with undo
-  const handleDeleteWithUndo = useCallback((id) => {
-    vibrate(15)
-    // Clear any existing pending delete
-    if (pendingDeleteTimer.current) {
-      clearTimeout(pendingDeleteTimer.current)
-      // Execute the previous pending delete immediately
-      if (pendingDelete) {
-        onDelete(pendingDelete.id)
-      }
-    }
-
-    // Find the item to show its title in the toast
-    const item = items.find(i => i.id === id)
-    setPendingDelete({ id, title: item?.title || 'Item' })
-
-    // Set timer to actually delete after 1.5 seconds
-    pendingDeleteTimer.current = setTimeout(() => {
-      onDelete(id)
-      setPendingDelete(null)
-    }, 1500)
-  }, [items, onDelete, pendingDelete])
-
-  // Undo delete
-  const handleUndoDelete = useCallback(() => {
-    if (pendingDeleteTimer.current) {
-      clearTimeout(pendingDeleteTimer.current)
-    }
-    setPendingDelete(null)
-    vibrate(5)
-  }, [])
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (pendingDeleteTimer.current) {
-        clearTimeout(pendingDeleteTimer.current)
-      }
-    }
   }, [])
 
   // Exit selection mode when no items selected

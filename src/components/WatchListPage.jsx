@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState } from 'react'
 import { vibrate, shareItems, formatWatchListForShare } from '../utils'
+import useUndoDelete from '../hooks/useUndoDelete'
 
 export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggleWatched }) {
   const [typeFilter, setTypeFilter] = useState('youtube') // youtube, movies
@@ -10,43 +11,13 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [shareToast, setShareToast] = useState(null)
-  const [pendingDelete, setPendingDelete] = useState(null)
-  const pendingDeleteTimer = useRef(null)
 
-  // Handle delete with undo
-  const handleDeleteWithUndo = useCallback((id) => {
-    vibrate(15)
-    if (pendingDeleteTimer.current) {
-      clearTimeout(pendingDeleteTimer.current)
-      if (pendingDelete) {
-        onDelete(pendingDelete.id)
-      }
-    }
-
-    const item = items.find(i => i.id === id)
-    setPendingDelete({ id, title: item?.title || 'Item' })
-
-    pendingDeleteTimer.current = setTimeout(() => {
-      onDelete(id)
-      setPendingDelete(null)
-    }, 1500)
-  }, [items, onDelete, pendingDelete])
-
-  const handleUndoDelete = useCallback(() => {
-    if (pendingDeleteTimer.current) {
-      clearTimeout(pendingDeleteTimer.current)
-    }
-    setPendingDelete(null)
-    vibrate(5)
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (pendingDeleteTimer.current) {
-        clearTimeout(pendingDeleteTimer.current)
-      }
-    }
-  }, [])
+  const {
+    pendingDelete,
+    handleDeleteWithUndo,
+    handleUndoDelete,
+    filterPendingDelete
+  } = useUndoDelete(items, onDelete)
 
   // Filter watch items (movies, shows, youtube)
   let watchItems = items.filter(item => item.type === 'movie' || item.type === 'show' || item.type === 'youtube')
@@ -222,7 +193,7 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
         </div>
       ) : (
         <div className="watchlist-items">
-          {watchItems.filter(item => item.id !== pendingDelete?.id).map((item, index) => (
+          {filterPendingDelete(watchItems).map((item, index) => (
             <div
               key={item.id}
               className={`watch-item ${item.watched ? 'watched' : ''}`}

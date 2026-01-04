@@ -1,5 +1,6 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState } from 'react'
 import { vibrate } from '../utils'
+import useUndoDelete from '../hooks/useUndoDelete'
 
 const CATEGORIES = ['personal', 'work', 'dad']
 
@@ -10,8 +11,13 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate, onEdit 
   const [category, setCategory] = useState('personal')
   const [loading, setLoading] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState('personal')
-  const [pendingDelete, setPendingDelete] = useState(null)
-  const pendingDeleteTimer = useRef(null)
+
+  const {
+    pendingDelete,
+    handleDeleteWithUndo,
+    handleUndoDelete,
+    filterPendingDelete
+  } = useUndoDelete(items, onDelete)
 
   // Filter project items
   let projects = items.filter(item => item.type === 'project')
@@ -29,41 +35,6 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate, onEdit 
   const personalCount = allProjects.filter(p => (p.category || 'personal') === 'personal').length
   const workCount = allProjects.filter(p => p.category === 'work').length
   const dadCount = allProjects.filter(p => p.category === 'dad').length
-
-  // Handle delete with undo
-  const handleDeleteWithUndo = useCallback((id) => {
-    vibrate(15)
-    if (pendingDeleteTimer.current) {
-      clearTimeout(pendingDeleteTimer.current)
-      if (pendingDelete) {
-        onDelete(pendingDelete.id)
-      }
-    }
-
-    const project = items.find(i => i.id === id)
-    setPendingDelete({ id, title: project?.title || 'Project' })
-
-    pendingDeleteTimer.current = setTimeout(() => {
-      onDelete(id)
-      setPendingDelete(null)
-    }, 1500)
-  }, [items, onDelete, pendingDelete])
-
-  const handleUndoDelete = useCallback(() => {
-    if (pendingDeleteTimer.current) {
-      clearTimeout(pendingDeleteTimer.current)
-    }
-    setPendingDelete(null)
-    vibrate(5)
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (pendingDeleteTimer.current) {
-        clearTimeout(pendingDeleteTimer.current)
-      }
-    }
-  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -195,7 +166,7 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate, onEdit 
         </div>
       ) : (
         <div className="projects-list">
-          {projects.filter(p => p.id !== pendingDelete?.id).map((project, index) => (
+          {filterPendingDelete(projects).map((project, index) => (
             <div
               key={project.id}
               className={`project-card ${project.completed ? 'completed' : ''}`}
