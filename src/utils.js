@@ -5,6 +5,17 @@ export function vibrate(pattern = 10) {
   }
 }
 
+// Named haptic patterns for different actions
+export const haptics = {
+  light: () => vibrate(5),           // Subtle tap - toggles, selections
+  medium: () => vibrate(10),         // Standard tap - buttons, actions
+  heavy: () => vibrate(20),          // Strong tap - important actions
+  success: () => vibrate([10, 50, 10]), // Double tap - completions
+  error: () => vibrate([50, 30, 50]),   // Warning pattern - errors, deletes
+  drag: () => vibrate(8),            // Drag start
+  drop: () => vibrate(15),           // Drop/release
+}
+
 // Format date for display
 export function formatDate(dateString) {
   if (!dateString) return ''

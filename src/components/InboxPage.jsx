@@ -2,9 +2,10 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import QuickAdd from './QuickAdd'
 import SwipeableItemCard from './SwipeableItemCard'
+import SkeletonCard from './SkeletonCard'
 import { vibrate, shareItems, formatInboxForShare } from '../utils'
 
-export default function InboxPage({ items, folders, onAdd, onDelete, onComplete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit, onReorder }) {
+export default function InboxPage({ items, folders, onAdd, onDelete, onComplete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit, onReorder, isLoading }) {
   const [sortBy, setSortBy] = useState('custom')
   const [isCompact, setIsCompact] = useState(() => {
     return localStorage.getItem('learnlater-compact-mode') === 'true'
@@ -216,9 +217,17 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
           {isRefreshing ? (
             <div className="refresh-spinner"></div>
           ) : (
-            <span style={{ opacity: pullDistance / 60 }}>
-              {pullDistance > 60 ? '↓ Release to refresh' : '↓ Pull to refresh'}
-            </span>
+            <>
+              <span
+                className={`pull-arrow ${pullDistance > 60 ? 'ready' : ''}`}
+                style={{ opacity: Math.min(pullDistance / 40, 1) }}
+              >
+                ↓
+              </span>
+              <span style={{ opacity: Math.min(pullDistance / 50, 1) }}>
+                {pullDistance > 60 ? 'Release' : 'Pull to refresh'}
+              </span>
+            </>
           )}
         </div>
       )}
@@ -276,7 +285,9 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
         )}
       </div>
 
-      {inboxItems.length === 0 ? (
+      {isLoading ? (
+        <SkeletonCard count={5} />
+      ) : inboxItems.length === 0 ? (
         <div className="empty-state">
           <div className="empty-state-icon">📥</div>
           <h3>Your inbox is empty</h3>
