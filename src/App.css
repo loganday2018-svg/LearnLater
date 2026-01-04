@@ -2465,6 +2465,7 @@ body {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: all 0.2s;
+  animation: card-enter 0.3s ease-out backwards;
 }
 
 .watch-item.watched {
@@ -4088,6 +4089,7 @@ body {
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: all 0.2s;
+  animation: card-enter 0.3s ease-out backwards;
 }
 
 .project-card.completed {
@@ -4140,18 +4142,29 @@ body {
   line-height: 1.4;
 }
 
+.project-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.project-card .edit-btn,
 .project-card .delete-btn {
   width: 32px;
   height: 32px;
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 18px;
   color: #999;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: color 0.2s;
+}
+
+.project-card .edit-btn:active {
+  color: #007aff;
 }
 
 .project-card .delete-btn:active {

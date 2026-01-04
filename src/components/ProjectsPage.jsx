@@ -1,15 +1,17 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { vibrate } from '../utils'
 
 const CATEGORIES = ['personal', 'work', 'dad']
 
-export default function ProjectsPage({ items, onAdd, onDelete, onUpdate }) {
+export default function ProjectsPage({ items, onAdd, onDelete, onUpdate, onEdit }) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [category, setCategory] = useState('personal')
   const [loading, setLoading] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState('personal')
+  const [pendingDelete, setPendingDelete] = useState(null)
+  const pendingDeleteTimer = useRef(null)
 
   // Filter project items
   let projects = items.filter(item => item.type === 'project')
@@ -27,6 +29,41 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate }) {
   const personalCount = allProjects.filter(p => (p.category || 'personal') === 'personal').length
   const workCount = allProjects.filter(p => p.category === 'work').length
   const dadCount = allProjects.filter(p => p.category === 'dad').length
+
+  // Handle delete with undo
+  const handleDeleteWithUndo = useCallback((id) => {
+    vibrate(15)
+    if (pendingDeleteTimer.current) {
+      clearTimeout(pendingDeleteTimer.current)
+      if (pendingDelete) {
+        onDelete(pendingDelete.id)
+      }
+    }
+
+    const project = items.find(i => i.id === id)
+    setPendingDelete({ id, title: project?.title || 'Project' })
+
+    pendingDeleteTimer.current = setTimeout(() => {
+      onDelete(id)
+      setPendingDelete(null)
+    }, 1500)
+  }, [items, onDelete, pendingDelete])
+
+  const handleUndoDelete = useCallback(() => {
+    if (pendingDeleteTimer.current) {
+      clearTimeout(pendingDeleteTimer.current)
+    }
+    setPendingDelete(null)
+    vibrate(5)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (pendingDeleteTimer.current) {
+        clearTimeout(pendingDeleteTimer.current)
+      }
+    }
+  }, [])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -158,10 +195,11 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate }) {
         </div>
       ) : (
         <div className="projects-list">
-          {projects.map(project => (
+          {projects.filter(p => p.id !== pendingDelete?.id).map((project, index) => (
             <div
               key={project.id}
               className={`project-card ${project.completed ? 'completed' : ''}`}
+              style={{ animationDelay: `${index * 30}ms` }}
             >
               <button
                 className="project-toggle"
@@ -180,18 +218,35 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate }) {
                 )}
               </div>
 
-              <button
-                className="delete-btn"
-                onClick={() => {
-                  vibrate(10)
-                  onDelete(project.id)
-                }}
-                aria-label="Delete"
-              >
-                ×
-              </button>
+              <div className="project-actions">
+                <button
+                  className="edit-btn"
+                  onClick={() => {
+                    vibrate(5)
+                    onEdit(project)
+                  }}
+                  aria-label="Edit"
+                >
+                  ✎
+                </button>
+                <button
+                  className="delete-btn"
+                  onClick={() => handleDeleteWithUndo(project.id)}
+                  aria-label="Delete"
+                >
+                  ×
+                </button>
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Undo Delete Toast */}
+      {pendingDelete && (
+        <div className="undo-toast">
+          <span>"{pendingDelete.title.substring(0, 25)}{pendingDelete.title.length > 25 ? '...' : ''}" deleted</span>
+          <button onClick={handleUndoDelete}>Undo</button>
         </div>
       )}
     </div>

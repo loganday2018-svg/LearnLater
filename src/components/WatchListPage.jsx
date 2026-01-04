@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { vibrate, shareItems, formatWatchListForShare } from '../utils'
 
 export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggleWatched }) {
@@ -10,6 +10,43 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [shareToast, setShareToast] = useState(null)
+  const [pendingDelete, setPendingDelete] = useState(null)
+  const pendingDeleteTimer = useRef(null)
+
+  // Handle delete with undo
+  const handleDeleteWithUndo = useCallback((id) => {
+    vibrate(15)
+    if (pendingDeleteTimer.current) {
+      clearTimeout(pendingDeleteTimer.current)
+      if (pendingDelete) {
+        onDelete(pendingDelete.id)
+      }
+    }
+
+    const item = items.find(i => i.id === id)
+    setPendingDelete({ id, title: item?.title || 'Item' })
+
+    pendingDeleteTimer.current = setTimeout(() => {
+      onDelete(id)
+      setPendingDelete(null)
+    }, 1500)
+  }, [items, onDelete, pendingDelete])
+
+  const handleUndoDelete = useCallback(() => {
+    if (pendingDeleteTimer.current) {
+      clearTimeout(pendingDeleteTimer.current)
+    }
+    setPendingDelete(null)
+    vibrate(5)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (pendingDeleteTimer.current) {
+        clearTimeout(pendingDeleteTimer.current)
+      }
+    }
+  }, [])
 
   // Filter watch items (movies, shows, youtube)
   let watchItems = items.filter(item => item.type === 'movie' || item.type === 'show' || item.type === 'youtube')
@@ -185,10 +222,11 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
         </div>
       ) : (
         <div className="watchlist-items">
-          {watchItems.map(item => (
+          {watchItems.filter(item => item.id !== pendingDelete?.id).map((item, index) => (
             <div
               key={item.id}
               className={`watch-item ${item.watched ? 'watched' : ''}`}
+              style={{ animationDelay: `${index * 30}ms` }}
             >
               <button
                 className="watch-toggle"
@@ -228,10 +266,7 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
                 </button>
                 <button
                   className="delete-btn"
-                  onClick={() => {
-                    vibrate(10)
-                    onDelete(item.id)
-                  }}
+                  onClick={() => handleDeleteWithUndo(item.id)}
                   aria-label="Delete"
                 >
                   ×
@@ -245,6 +280,14 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
       {/* Share Toast */}
       {shareToast && (
         <div className="share-toast">{shareToast}</div>
+      )}
+
+      {/* Undo Delete Toast */}
+      {pendingDelete && (
+        <div className="undo-toast">
+          <span>"{pendingDelete.title.substring(0, 25)}{pendingDelete.title.length > 25 ? '...' : ''}" deleted</span>
+          <button onClick={handleUndoDelete}>Undo</button>
+        </div>
       )}
     </div>
   )

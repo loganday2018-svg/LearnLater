@@ -564,6 +564,7 @@ function App() {
                   onAdd={addItem}
                   onDelete={deleteItem}
                   onUpdate={updateItem}
+                  onEdit={setEditingItem}
                 />
               }
             />

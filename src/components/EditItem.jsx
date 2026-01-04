@@ -19,10 +19,12 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
     return item.due_date
   })
   const [recurrence, setRecurrence] = useState(item.recurrence_rule || null)
+  const [category, setCategory] = useState(item.category || 'personal')
   const [loading, setLoading] = useState(false)
 
   const isWatchType = item.type === 'movie' || item.type === 'show' || item.type === 'youtube'
   const isInboxType = item.type === 'link' || item.type === 'text' || item.type === 'image' || item.type === 'checklist'
+  const isProjectType = item.type === 'project'
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -50,6 +52,9 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
       updates.type = mediaType
       updates.url = url.trim() || null
       updates.content = content.trim() || null
+    } else if (isProjectType) {
+      updates.content = content.trim() || null
+      updates.category = category
     }
 
     await onSave(item.id, updates)
@@ -62,6 +67,7 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
     if (item.type === 'movie') return 'Movie'
     if (item.type === 'show') return 'TV Show'
     if (item.type === 'youtube') return 'YouTube'
+    if (item.type === 'project') return 'Project'
     return 'Note'
   }
 
@@ -181,7 +187,45 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
             </>
           )}
 
-          {!isWatchType && (
+          {/* Project fields */}
+          {isProjectType && (
+            <>
+              <div className="category-toggle">
+                <button
+                  type="button"
+                  className={category === 'personal' ? 'active' : ''}
+                  onClick={() => setCategory('personal')}
+                >
+                  Personal
+                </button>
+                <button
+                  type="button"
+                  className={category === 'work' ? 'active' : ''}
+                  onClick={() => setCategory('work')}
+                >
+                  Work
+                </button>
+                <button
+                  type="button"
+                  className={category === 'dad' ? 'active' : ''}
+                  onClick={() => setCategory('dad')}
+                >
+                  Dad
+                </button>
+              </div>
+              <label>
+                <span>Description</span>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="Description or goals..."
+                  rows={3}
+                />
+              </label>
+            </>
+          )}
+
+          {!isWatchType && !isProjectType && (
             <label>
               <span>Tags</span>
               <TagInput
