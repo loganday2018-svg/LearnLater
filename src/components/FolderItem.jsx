@@ -85,7 +85,6 @@ export default function FolderItem({
         >
           {isExpanded ? '▼' : '▶'}
         </button>
-        <span className="folder-icon">📁</span>
         <span className="folder-name">{folder.name}</span>
         <span className="folder-count">
           {folderItems.length + childFolders.length > 0

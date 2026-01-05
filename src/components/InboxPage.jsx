@@ -9,7 +9,7 @@ import { vibrate, shareItems, formatInboxForShare } from '../utils'
 import useUndoDelete from '../hooks/useUndoDelete'
 
 export default function InboxPage({ items, folders, onAdd, onDelete, onComplete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit, onReorder, onUpdate, isLoading }) {
-  const [sortBy, setSortBy] = useState('custom')
+  const [sortBy, setSortBy] = useState('newest')
   const [isCompact, setIsCompact] = useState(() => {
     return localStorage.getItem('learnlater-compact-mode') === 'true'
   })
