@@ -30,8 +30,9 @@ export default function LibraryPage({
   const [showCreateFolder, setShowCreateFolder] = useState(false)
   const [addToFolderId, setAddToFolderId] = useState(null)
 
-  // Get root-level folders (no parent)
-  const rootFolders = folders
+  // Get root-level library folders (no parent, folder_type is 'library' or null)
+  const libraryFolders = folders.filter(f => !f.folder_type || f.folder_type === 'library')
+  const rootFolders = libraryFolders
     .filter(f => !f.parent_id)
     .sort((a, b) => a.position - b.position)
 
@@ -62,7 +63,7 @@ export default function LibraryPage({
                 key={folder.id}
                 folder={folder}
                 items={items}
-                allFolders={folders}
+                allFolders={libraryFolders}
                 depth={0}
                 onCreateFolder={onCreateFolder}
                 onDeleteFolder={onDeleteFolder}
