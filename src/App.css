@@ -706,6 +706,35 @@ body {
   color: white;
 }
 
+/* Delete confirmation inline */
+.delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #ff3b30;
+  font-weight: 600;
+}
+
+.delete-confirm button {
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.delete-confirm .confirm-yes {
+  background: #ff3b30;
+  color: white;
+}
+
+.delete-confirm .confirm-no {
+  background: #e0e0e0;
+  color: #333;
+}
+
 /* Add menu dropdown */
 .add-menu-container {
   position: relative;

@@ -19,6 +19,7 @@ export default function FolderItem({
   const [subfolderName, setSubfolderName] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [shareStatus, setShareStatus] = useState(null) // 'copying' | 'copied' | null
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const inputRef = useRef(null)
   const menuRef = useRef(null)
 
@@ -130,13 +131,34 @@ export default function FolderItem({
               </div>
             )}
           </div>
-          <button
-            className="folder-action-btn delete"
-            onClick={() => onDeleteFolder(folder.id)}
-            title="Delete folder"
-          >
-            ×
-          </button>
+          {showDeleteConfirm ? (
+            <div className="delete-confirm">
+              <span>Delete?</span>
+              <button
+                className="confirm-yes"
+                onClick={() => {
+                  onDeleteFolder(folder.id)
+                  setShowDeleteConfirm(false)
+                }}
+              >
+                Yes
+              </button>
+              <button
+                className="confirm-no"
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <button
+              className="folder-action-btn delete"
+              onClick={() => setShowDeleteConfirm(true)}
+              title="Delete folder"
+            >
+              ×
+            </button>
+          )}
         </div>
       </div>
 
