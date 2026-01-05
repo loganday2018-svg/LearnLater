@@ -3,10 +3,11 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import QuickAdd from './QuickAdd'
 import SwipeableItemCard from './SwipeableItemCard'
 import SkeletonCard from './SkeletonCard'
+import ExportModal from './ExportModal'
 import { vibrate, shareItems, formatInboxForShare } from '../utils'
 import useUndoDelete from '../hooks/useUndoDelete'
 
-export default function InboxPage({ items, folders, onAdd, onDelete, onComplete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit, onReorder, isLoading }) {
+export default function InboxPage({ items, folders, onAdd, onDelete, onComplete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit, onReorder, onUpdate, isLoading }) {
   const [sortBy, setSortBy] = useState('custom')
   const [isCompact, setIsCompact] = useState(() => {
     return localStorage.getItem('learnlater-compact-mode') === 'true'
@@ -20,6 +21,7 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [showFolderPicker, setShowFolderPicker] = useState(false)
   const [shareToast, setShareToast] = useState(null)
+  const [showExportModal, setShowExportModal] = useState(false)
   const containerRef = useRef(null)
   const startY = useRef(0)
   const isPulling = useRef(false)
@@ -91,6 +93,14 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
     clearSelection()
   }, [selectedIds, onMoveToFolder, clearSelection])
 
+  // Handle long press to pin/unpin
+  const handlePin = useCallback((id) => {
+    const item = items.find(i => i.id === id)
+    if (item && onUpdate) {
+      onUpdate(id, { pinned: !item.pinned })
+    }
+  }, [items, onUpdate])
+
   // Mark hint as seen after showing
   useEffect(() => {
     if (!hasSeenHint) {
@@ -108,6 +118,10 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
   let inboxItems = items.filter(item => !item.folder_id && inboxTypes.includes(item.type))
 
   inboxItems = [...inboxItems].sort((a, b) => {
+    // Pinned items always first
+    if (a.pinned && !b.pinned) return -1
+    if (!a.pinned && b.pinned) return 1
+
     switch (sortBy) {
       case 'custom':
         // Use sort_order if available, otherwise fall back to created_at
@@ -230,6 +244,16 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
                   ↗
                 </button>
                 <button
+                  className="export-pdf-btn"
+                  onClick={() => {
+                    vibrate(5)
+                    setShowExportModal(true)
+                  }}
+                  aria-label="Export to PDF"
+                >
+                  PDF
+                </button>
+                <button
                   className="select-mode-btn"
                   onClick={() => {
                     vibrate(5)
@@ -268,6 +292,7 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
                 onDelete={handleDeleteWithUndo}
                 onComplete={onComplete}
                 onEdit={onEdit}
+                onPin={handlePin}
                 showHint={index === 0 && !hasSeenHint && !selectionMode}
                 selectionMode={selectionMode}
                 isSelected={selectedIds.has(item.id)}
@@ -339,6 +364,15 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
           <span>"{pendingDelete.title.substring(0, 25)}{pendingDelete.title.length > 25 ? '...' : ''}" deleted</span>
           <button onClick={handleUndoDelete}>Undo</button>
         </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          items={inboxItems}
+          tabName="Inbox"
+          onClose={() => setShowExportModal(false)}
+        />
       )}
     </div>
   )

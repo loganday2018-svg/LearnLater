@@ -57,19 +57,21 @@ function getDueDateInfo(dueDate) {
   return { status, text }
 }
 
-export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, showHint, selectionMode, isSelected, onToggleSelect, sortable = false, isCompact = false, pendingDeleteId = null }) {
+export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, onPin, showHint, selectionMode, isSelected, onToggleSelect, sortable = false, isCompact = false, pendingDeleteId = null }) {
   const [swipeX, setSwipeX] = useState(0)
   const [isSwiping, setIsSwiping] = useState(false)
   const [hintPlayed, setHintPlayed] = useState(false)
   const startX = useRef(0)
   const startY = useRef(0)
   const cardRef = useRef(null)
+  const longPressTimer = useRef(null)
+  const hasMovedRef = useRef(false)
 
   // Check if this item is pending deletion
   const isPendingDelete = pendingDeleteId === item.id
 
-  // Swipe right completes items with due dates, deletes items without
-  const hasRightAction = item.due_date && onComplete
+  // Swipe right completes any item
+  const hasRightAction = !!onComplete
 
   const {
     attributes,
@@ -108,17 +110,45 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
     }
   }, [isDragging])
 
+  // Cleanup long press timer
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+      }
+    }
+  }, [])
+
   const handleTouchStart = (e) => {
     if (e.target.closest('.drag-handle') || e.target.closest('.edit-btn')) return
     startX.current = e.touches[0].clientX
     startY.current = e.touches[0].clientY
+    hasMovedRef.current = false
     setIsSwiping(true)
+
+    // Start long press timer for pin
+    if (onPin) {
+      longPressTimer.current = setTimeout(() => {
+        if (!hasMovedRef.current) {
+          vibrate([10, 50, 10])
+          onPin(item.id)
+        }
+      }, 500)
+    }
   }
 
   const handleTouchMove = (e) => {
     if (!isSwiping) return
     const deltaX = e.touches[0].clientX - startX.current
     const deltaY = e.touches[0].clientY - startY.current
+
+    // Cancel long press if moved
+    if (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10) {
+      hasMovedRef.current = true
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current)
+      }
+    }
 
     // Allow swipe left (delete) always, swipe right (complete) if item has due date
     if (Math.abs(deltaX) > Math.abs(deltaY)) {
@@ -136,6 +166,9 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
 
   const handleTouchEnd = () => {
     setIsSwiping(false)
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+    }
     if (swipeX < -70) {
       // Swipe left - delete
       vibrate(15)
@@ -201,7 +234,7 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
       <div
         ref={cardRef}
         style={cardStyle}
-        className={`item-card ${item.type} ${isDragging ? 'dragging' : ''} ${isClickable ? 'clickable' : ''} ${isSelected ? 'selected' : ''} ${item.due_date && getDueDateInfo(item.due_date)?.status === 'overdue' ? 'overdue' : ''} ${isCompact ? 'compact' : ''}`}
+        className={`item-card ${item.type} ${isDragging ? 'dragging' : ''} ${isClickable ? 'clickable' : ''} ${isSelected ? 'selected' : ''} ${item.due_date && getDueDateInfo(item.due_date)?.status === 'overdue' ? 'overdue' : ''} ${isCompact ? 'compact' : ''} ${item.pinned ? 'pinned' : ''}`}
         onClick={handleCardClick}
         onTouchStart={selectionMode ? undefined : handleTouchStart}
         onTouchMove={selectionMode ? undefined : handleTouchMove}
@@ -228,6 +261,7 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
         <div className="card-body">
           <div className="card-header">
             <span className="card-type">
+              {item.pinned && <span className="pin-icon">📌</span>}
               {item.type === 'link' ? '🔗' : item.type === 'image' ? '🖼️' : '📝'}
             </span>
             {item.due_date && (() => {
@@ -285,7 +319,7 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
         </div>
 
         <div className="card-actions">
-          {item.due_date && onComplete && (
+          {onComplete && (
             <button
               className="complete-btn"
               onClick={(e) => {
@@ -293,8 +327,8 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
                 vibrate(10)
                 onComplete(item.id)
               }}
-              aria-label={item.recurrence_rule ? "Complete and advance" : "Complete item"}
-              title={item.recurrence_rule ? "Complete & advance to next" : "Complete"}
+              aria-label="Complete item"
+              title="Complete"
             >
               ✓
             </button>

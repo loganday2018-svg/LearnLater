@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { vibrate } from '../utils'
+import ExportModal from './ExportModal'
 
 // Smart countdown display
 function formatCountdown(targetDate) {
@@ -49,11 +50,28 @@ export default function CountdownPage({ items, onAdd, onDelete }) {
   const [targetDate, setTargetDate] = useState('')
   const [targetTime, setTargetTime] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
   const [, setTick] = useState(0)
 
-  // Filter countdown items
+  // Filter countdown items - upcoming first (closest at top), passed at bottom
+  const now = new Date()
   const countdowns = (items || []).filter(item => item.type === 'countdown')
-    .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+    .sort((a, b) => {
+      const dateA = new Date(a.due_date)
+      const dateB = new Date(b.due_date)
+      const aIsPassed = dateA <= now
+      const bIsPassed = dateB <= now
+
+      // Upcoming events come before passed events
+      if (!aIsPassed && bIsPassed) return -1
+      if (aIsPassed && !bIsPassed) return 1
+
+      // Within same group, sort by date (closest first for upcoming, most recent first for passed)
+      if (!aIsPassed && !bIsPassed) {
+        return dateA - dateB // Upcoming: closest first
+      }
+      return dateB - dateA // Passed: most recent first
+    })
 
   // Update every second for live countdown
   useEffect(() => {
@@ -102,15 +120,29 @@ export default function CountdownPage({ items, onAdd, onDelete }) {
     <div className="countdown-page">
       <div className="countdown-header">
         <h2>Countdowns</h2>
-        <button
-          className="add-countdown-btn"
-          onClick={() => {
-            vibrate(5)
-            setShowAddForm(!showAddForm)
-          }}
-        >
-          {showAddForm ? '×' : '+'}
-        </button>
+        <div className="header-actions">
+          {countdowns.length > 0 && (
+            <button
+              className="export-pdf-btn"
+              onClick={() => {
+                vibrate(5)
+                setShowExportModal(true)
+              }}
+              aria-label="Export to PDF"
+            >
+              PDF
+            </button>
+          )}
+          <button
+            className="add-countdown-btn"
+            onClick={() => {
+              vibrate(5)
+              setShowAddForm(!showAddForm)
+            }}
+          >
+            {showAddForm ? '×' : '+'}
+          </button>
+        </div>
       </div>
 
       {showAddForm && (
@@ -197,6 +229,15 @@ export default function CountdownPage({ items, onAdd, onDelete }) {
             )
           })}
         </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          items={countdowns}
+          tabName="Countdowns"
+          onClose={() => setShowExportModal(false)}
+        />
       )}
     </div>
   )

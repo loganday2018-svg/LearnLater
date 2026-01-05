@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { vibrate, shareItems, formatWatchListForShare } from '../utils'
 import useUndoDelete from '../hooks/useUndoDelete'
+import SwipeableCard from './SwipeableCard'
+import ExportModal from './ExportModal'
 
-export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggleWatched }) {
+export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggleWatched, onUpdate }) {
   const [typeFilter, setTypeFilter] = useState('youtube') // youtube, movies
   const [showAddForm, setShowAddForm] = useState(false)
   const [mediaType, setMediaType] = useState('movie')
@@ -11,6 +14,7 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
   const [shareToast, setShareToast] = useState(null)
+  const [showExportModal, setShowExportModal] = useState(false)
 
   const {
     pendingDelete,
@@ -34,10 +38,29 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
   const youtubeCount = allWatchItems.filter(item => item.type === 'youtube').length
   const moviesCount = allWatchItems.filter(item => item.type === 'movie' || item.type === 'show').length
 
-  // Sort by created date, newest first
-  watchItems = [...watchItems].sort((a, b) =>
-    new Date(b.created_at) - new Date(a.created_at)
-  )
+  // Sort by pinned first, then sort_order, then created date
+  watchItems = [...watchItems].sort((a, b) => {
+    // Pinned items first
+    if (a.pinned && !b.pinned) return -1
+    if (!a.pinned && b.pinned) return 1
+    // Then by sort_order if exists
+    if (a.sort_order != null && b.sort_order != null) {
+      return a.sort_order - b.sort_order
+    }
+    // Fall back to created date
+    return new Date(b.created_at) - new Date(a.created_at)
+  })
+
+  // Get IDs for SortableContext
+  const itemIds = watchItems.map(item => item.id)
+
+  // Handle long press for pinning
+  function handleLongPress(id) {
+    const item = items.find(i => i.id === id)
+    if (item) {
+      onUpdate(id, { pinned: !item.pinned })
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -87,13 +110,25 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
         <h2>Watch List</h2>
         <div className="header-actions">
           {allWatchItems.length > 0 && (
-            <button
-              className="share-btn"
-              onClick={handleShare}
-              aria-label="Share watch list"
-            >
-              ↗
-            </button>
+            <>
+              <button
+                className="share-btn"
+                onClick={handleShare}
+                aria-label="Share watch list"
+              >
+                ↗
+              </button>
+              <button
+                className="export-pdf-btn"
+                onClick={() => {
+                  vibrate(5)
+                  setShowExportModal(true)
+                }}
+                aria-label="Export to PDF"
+              >
+                PDF
+              </button>
+            </>
           )}
           <button
             className="add-watch-btn"
@@ -192,42 +227,46 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
           <p>Add {typeFilter === 'youtube' ? 'videos' : 'movies and TV shows'} you want to watch!</p>
         </div>
       ) : (
-        <div className="watchlist-items">
-          {filterPendingDelete(watchItems).map((item, index) => (
-            <div
-              key={item.id}
-              className={`watch-item ${item.watched ? 'watched' : ''}`}
-              style={{ animationDelay: `${index * 30}ms` }}
-            >
-              <button
-                className="watch-toggle"
-                onClick={() => handleToggleWatched(item)}
-                aria-label={item.watched ? 'Mark as unwatched' : 'Mark as watched'}
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          <div className="watchlist-items">
+            {filterPendingDelete(watchItems).map((item, index) => (
+              <SwipeableCard
+                key={item.id}
+                id={item.id}
+                onDelete={handleDeleteWithUndo}
+                onLongPress={handleLongPress}
+                className={`watch-item-inner ${item.watched ? 'watched' : ''} ${item.pinned ? 'pinned' : ''}`}
+                style={{ animationDelay: `${index * 30}ms` }}
               >
-                {item.watched ? '✓' : '○'}
-              </button>
+                <button
+                  className="watch-toggle"
+                  onClick={() => handleToggleWatched(item)}
+                  aria-label={item.watched ? 'Mark as unwatched' : 'Mark as watched'}
+                >
+                  {item.watched ? '✓' : '○'}
+                </button>
 
-              <div className="watch-item-content">
-                <div className="watch-item-header">
-                  <span className="media-type-icon">
-                    {item.type === 'movie' ? '🎬' : item.type === 'youtube' ? '▶️' : '📺'}
-                  </span>
-                  <h3 className={item.watched ? 'strikethrough' : ''}>
-                    {item.url ? (
-                      <a href={item.url} target="_blank" rel="noopener noreferrer">
-                        {item.title}
-                      </a>
-                    ) : (
-                      item.title
-                    )}
-                  </h3>
+                <div className="watch-item-content">
+                  <div className="watch-item-header">
+                    <span className="media-type-icon">
+                      {item.pinned && <span className="pin-icon">📌</span>}
+                      {item.type === 'movie' ? '🎬' : item.type === 'youtube' ? '▶️' : '📺'}
+                    </span>
+                    <h3 className={item.watched ? 'strikethrough' : ''}>
+                      {item.url ? (
+                        <a href={item.url} target="_blank" rel="noopener noreferrer">
+                          {item.title}
+                        </a>
+                      ) : (
+                        item.title
+                      )}
+                    </h3>
+                  </div>
+                  {item.content && (
+                    <p className="watch-notes">{item.content}</p>
+                  )}
                 </div>
-                {item.content && (
-                  <p className="watch-notes">{item.content}</p>
-                )}
-              </div>
 
-              <div className="watch-item-actions">
                 <button
                   className="edit-btn"
                   onClick={() => onEdit(item)}
@@ -235,17 +274,10 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
                 >
                   ✎
                 </button>
-                <button
-                  className="delete-btn"
-                  onClick={() => handleDeleteWithUndo(item.id)}
-                  aria-label="Delete"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+              </SwipeableCard>
+            ))}
+          </div>
+        </SortableContext>
       )}
 
       {/* Share Toast */}
@@ -259,6 +291,15 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
           <span>"{pendingDelete.title.substring(0, 25)}{pendingDelete.title.length > 25 ? '...' : ''}" deleted</span>
           <button onClick={handleUndoDelete}>Undo</button>
         </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          items={watchItems}
+          tabName="Watch List"
+          onClose={() => setShowExportModal(false)}
+        />
       )}
     </div>
   )

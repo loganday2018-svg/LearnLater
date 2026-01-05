@@ -1,6 +1,9 @@
 import { useState } from 'react'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { vibrate } from '../utils'
 import useUndoDelete from '../hooks/useUndoDelete'
+import SwipeableCard from './SwipeableCard'
+import ExportModal from './ExportModal'
 
 const CATEGORIES = ['personal', 'work', 'dad']
 
@@ -11,6 +14,7 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate, onEdit 
   const [category, setCategory] = useState('personal')
   const [loading, setLoading] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState('personal')
+  const [showExportModal, setShowExportModal] = useState(false)
 
   const {
     pendingDelete,
@@ -25,10 +29,26 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate, onEdit 
   // Apply category filter
   projects = projects.filter(p => (p.category || 'personal') === categoryFilter)
 
-  // Sort by created date, newest first
-  projects = [...projects].sort((a, b) =>
-    new Date(b.created_at) - new Date(a.created_at)
-  )
+  // Sort by pinned first, then sort_order, then created date
+  projects = [...projects].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1
+    if (!a.pinned && b.pinned) return 1
+    if (a.sort_order != null && b.sort_order != null) {
+      return a.sort_order - b.sort_order
+    }
+    return new Date(b.created_at) - new Date(a.created_at)
+  })
+
+  // Get IDs for SortableContext
+  const projectIds = projects.map(p => p.id)
+
+  // Handle long press for pinning
+  function handleLongPress(id) {
+    const project = items.find(i => i.id === id)
+    if (project) {
+      onUpdate(id, { pinned: !project.pinned })
+    }
+  }
 
   // Count for badges
   const allProjects = items.filter(item => item.type === 'project')
@@ -72,15 +92,29 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate, onEdit 
     <div className="projects-page">
       <div className="projects-header">
         <h2>Projects</h2>
-        <button
-          className="add-project-btn"
-          onClick={() => {
-            vibrate(5)
-            setShowAddForm(!showAddForm)
-          }}
-        >
-          {showAddForm ? '×' : '+'}
-        </button>
+        <div className="header-actions">
+          {allProjects.length > 0 && (
+            <button
+              className="export-pdf-btn"
+              onClick={() => {
+                vibrate(5)
+                setShowExportModal(true)
+              }}
+              aria-label="Export to PDF"
+            >
+              PDF
+            </button>
+          )}
+          <button
+            className="add-project-btn"
+            onClick={() => {
+              vibrate(5)
+              setShowAddForm(!showAddForm)
+            }}
+          >
+            {showAddForm ? '×' : '+'}
+          </button>
+        </div>
       </div>
 
       {showAddForm && (
@@ -165,31 +199,35 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate, onEdit 
           <p>Add projects to track your goals and ideas!</p>
         </div>
       ) : (
-        <div className="projects-list">
-          {filterPendingDelete(projects).map((project, index) => (
-            <div
-              key={project.id}
-              className={`project-card ${project.completed ? 'completed' : ''}`}
-              style={{ animationDelay: `${index * 30}ms` }}
-            >
-              <button
-                className="project-toggle"
-                onClick={() => handleToggleComplete(project)}
-                aria-label={project.completed ? 'Mark as active' : 'Mark as complete'}
+        <SortableContext items={projectIds} strategy={verticalListSortingStrategy}>
+          <div className="projects-list">
+            {filterPendingDelete(projects).map((project, index) => (
+              <SwipeableCard
+                key={project.id}
+                id={project.id}
+                onDelete={handleDeleteWithUndo}
+                onLongPress={handleLongPress}
+                className={`project-card-inner ${project.completed ? 'completed' : ''} ${project.pinned ? 'pinned' : ''}`}
+                style={{ animationDelay: `${index * 30}ms` }}
               >
-                {project.completed ? '✓' : '○'}
-              </button>
+                <button
+                  className="project-toggle"
+                  onClick={() => handleToggleComplete(project)}
+                  aria-label={project.completed ? 'Mark as active' : 'Mark as complete'}
+                >
+                  {project.completed ? '✓' : '○'}
+                </button>
 
-              <div className="project-content">
-                <h3 className={project.completed ? 'strikethrough' : ''}>
-                  {project.title}
-                </h3>
-                {project.content && (
-                  <p className="project-description">{project.content}</p>
-                )}
-              </div>
+                <div className="project-content">
+                  <h3 className={project.completed ? 'strikethrough' : ''}>
+                    {project.pinned && <span className="pin-icon">📌</span>}
+                    {project.title}
+                  </h3>
+                  {project.content && (
+                    <p className="project-description">{project.content}</p>
+                  )}
+                </div>
 
-              <div className="project-actions">
                 <button
                   className="edit-btn"
                   onClick={() => {
@@ -200,17 +238,10 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate, onEdit 
                 >
                   ✎
                 </button>
-                <button
-                  className="delete-btn"
-                  onClick={() => handleDeleteWithUndo(project.id)}
-                  aria-label="Delete"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+              </SwipeableCard>
+            ))}
+          </div>
+        </SortableContext>
       )}
 
       {/* Undo Delete Toast */}
@@ -219,6 +250,15 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate, onEdit 
           <span>"{pendingDelete.title.substring(0, 25)}{pendingDelete.title.length > 25 ? '...' : ''}" deleted</span>
           <button onClick={handleUndoDelete}>Undo</button>
         </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          items={projects}
+          tabName="Projects"
+          onClose={() => setShowExportModal(false)}
+        />
       )}
     </div>
   )

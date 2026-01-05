@@ -1,6 +1,10 @@
 import { useState, useRef } from 'react'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { supabase } from '../supabaseClient'
 import { vibrate, shareItems, formatBooksForShare } from '../utils'
+import useUndoDelete from '../hooks/useUndoDelete'
+import SwipeableCard from './SwipeableCard'
+import ExportModal from './ExportModal'
 
 export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
   const [filter, setFilter] = useState('all')
@@ -19,9 +23,17 @@ export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
   const [noteImagePreview, setNoteImagePreview] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [shareToast, setShareToast] = useState(null)
+  const [showExportModal, setShowExportModal] = useState(false)
   const fileInputRef = useRef(null)
   const isSubmitting = useRef(false)
   const isAddingNote = useRef(false)
+
+  const {
+    pendingDelete,
+    handleDeleteWithUndo,
+    handleUndoDelete,
+    filterPendingDelete
+  } = useUndoDelete(items, onDelete)
 
   // Filter book items
   let books = items.filter(item => item.type === 'book')
@@ -30,10 +42,26 @@ export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
     books = books.filter(item => item.reading_status === filter)
   }
 
-  // Sort by created date, newest first
-  books = [...books].sort((a, b) =>
-    new Date(b.created_at) - new Date(a.created_at)
-  )
+  // Sort by pinned first, then sort_order, then created date
+  books = [...books].sort((a, b) => {
+    if (a.pinned && !b.pinned) return -1
+    if (!a.pinned && b.pinned) return 1
+    if (a.sort_order != null && b.sort_order != null) {
+      return a.sort_order - b.sort_order
+    }
+    return new Date(b.created_at) - new Date(a.created_at)
+  })
+
+  // Get IDs for SortableContext
+  const bookIds = books.map(b => b.id)
+
+  // Handle long press for pinning
+  function handleLongPress(id) {
+    const book = items.find(i => i.id === id)
+    if (book) {
+      onUpdate(id, { pinned: !book.pinned })
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -229,13 +257,25 @@ export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
         <h2>Books</h2>
         <div className="header-actions">
           {allBooks.length > 0 && (
-            <button
-              className="share-btn"
-              onClick={handleShare}
-              aria-label="Share reading list"
-            >
-              ↗
-            </button>
+            <>
+              <button
+                className="share-btn"
+                onClick={handleShare}
+                aria-label="Share reading list"
+              >
+                ↗
+              </button>
+              <button
+                className="export-pdf-btn"
+                onClick={() => {
+                  vibrate(5)
+                  setShowExportModal(true)
+                }}
+                aria-label="Export to PDF"
+              >
+                PDF
+              </button>
+            </>
           )}
           <button
             className="add-book-btn"
@@ -325,27 +365,36 @@ export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
           <p>Add books you're reading or want to read, and take notes!</p>
         </div>
       ) : (
-        <div className="books-list">
-          {books.map(book => (
-            <div
-              key={book.id}
-              className={`book-card ${expandedBookId === book.id ? 'expanded' : ''}`}
-            >
-              <div className="book-card-header" onClick={() => toggleExpand(book.id)}>
-                <div className="book-info">
-                  <span className="book-status-icon">{getStatusIcon(book.reading_status)}</span>
-                  <div className="book-title-author">
-                    <h3>{book.title}</h3>
-                    {book.author && <span className="book-author">by {book.author}</span>}
+        <SortableContext items={bookIds} strategy={verticalListSortingStrategy}>
+          <div className="books-list">
+            {filterPendingDelete(books).map((book, index) => (
+              <SwipeableCard
+                key={book.id}
+                id={book.id}
+                onDelete={handleDeleteWithUndo}
+                onLongPress={handleLongPress}
+                sortable={expandedBookId !== book.id}
+                className={`book-card-inner ${expandedBookId === book.id ? 'expanded' : ''} ${book.pinned ? 'pinned' : ''}`}
+                style={{ animationDelay: `${index * 30}ms` }}
+              >
+                <div className="book-card-main" onClick={() => toggleExpand(book.id)}>
+                  <div className="book-info">
+                    <span className="book-status-icon">
+                      {book.pinned && <span className="pin-icon">📌</span>}
+                      {getStatusIcon(book.reading_status)}
+                    </span>
+                    <div className="book-title-author">
+                      <h3>{book.title}</h3>
+                      {book.author && <span className="book-author">by {book.author}</span>}
+                    </div>
+                  </div>
+                  <div className="book-meta">
+                    <span className="book-notes-count">
+                      {(book.book_notes || []).length} notes
+                    </span>
+                    <span className="expand-icon">{expandedBookId === book.id ? '▼' : '▶'}</span>
                   </div>
                 </div>
-                <div className="book-meta">
-                  <span className="book-notes-count">
-                    {(book.book_notes || []).length} notes
-                  </span>
-                  <span className="expand-icon">{expandedBookId === book.id ? '▼' : '▶'}</span>
-                </div>
-              </div>
 
               {expandedBookId === book.id && (
                 <div className="book-expanded">
@@ -500,14 +549,32 @@ export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
                   </div>
                 </div>
               )}
-            </div>
-          ))}
-        </div>
+              </SwipeableCard>
+            ))}
+          </div>
+        </SortableContext>
       )}
 
       {/* Share Toast */}
       {shareToast && (
         <div className="share-toast">{shareToast}</div>
+      )}
+
+      {/* Undo Delete Toast */}
+      {pendingDelete && (
+        <div className="undo-toast">
+          <span>"{pendingDelete.title.substring(0, 25)}{pendingDelete.title.length > 25 ? '...' : ''}" deleted</span>
+          <button onClick={handleUndoDelete}>Undo</button>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          items={books}
+          tabName="Books"
+          onClose={() => setShowExportModal(false)}
+        />
       )}
     </div>
   )

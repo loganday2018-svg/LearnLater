@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { DndContext, TouchSensor, MouseSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { supabase } from './supabaseClient'
@@ -21,6 +21,7 @@ import SharedFolderPage from './components/SharedFolderPage'
 import './App.css'
 
 function App() {
+  const location = useLocation()
   const [session, setSession] = useState(null)
   const [items, setItems] = useState([])
   const [folders, setFolders] = useState([])
@@ -64,21 +65,40 @@ function App() {
 
     if (!over || active.id === over.id) return
 
-    // Get inbox items (non-folder items)
-    const inboxTypes = ['link', 'text', 'image', 'checklist']
-    const inboxItems = items.filter(item => !item.folder_id && inboxTypes.includes(item.type))
+    // Find which item was dragged to determine the type group
+    const draggedItem = items.find(item => item.id === active.id)
+    if (!draggedItem) return
 
-    const oldIndex = inboxItems.findIndex(item => item.id === active.id)
-    const newIndex = inboxItems.findIndex(item => item.id === over.id)
+    // Determine which type group to reorder
+    let typeGroup = []
+    const inboxTypes = ['link', 'text', 'image', 'checklist']
+    const watchTypes = ['movie', 'show', 'youtube']
+    const projectTypes = ['project']
+    const bookTypes = ['book']
+
+    if (inboxTypes.includes(draggedItem.type)) {
+      typeGroup = items.filter(item => !item.folder_id && inboxTypes.includes(item.type))
+    } else if (watchTypes.includes(draggedItem.type)) {
+      typeGroup = items.filter(item => watchTypes.includes(item.type))
+    } else if (projectTypes.includes(draggedItem.type)) {
+      typeGroup = items.filter(item => projectTypes.includes(item.type))
+    } else if (bookTypes.includes(draggedItem.type)) {
+      typeGroup = items.filter(item => bookTypes.includes(item.type))
+    } else {
+      return
+    }
+
+    const oldIndex = typeGroup.findIndex(item => item.id === active.id)
+    const newIndex = typeGroup.findIndex(item => item.id === over.id)
 
     if (oldIndex === -1 || newIndex === -1) return
 
     // Reorder locally first
-    const reorderedInbox = arrayMove(inboxItems, oldIndex, newIndex)
+    const reorderedGroup = arrayMove(typeGroup, oldIndex, newIndex)
 
     // Update sort_order for all reordered items
     const updatedItems = items.map(item => {
-      const newPosition = reorderedInbox.findIndex(i => i.id === item.id)
+      const newPosition = reorderedGroup.findIndex(i => i.id === item.id)
       if (newPosition !== -1) {
         return { ...item, sort_order: newPosition }
       }
@@ -89,7 +109,7 @@ function App() {
 
     // Persist to database
     try {
-      const updates = reorderedInbox.map((item, index) => ({
+      const updates = reorderedGroup.map((item, index) => ({
         id: item.id,
         sort_order: index
       }))
@@ -527,6 +547,7 @@ function App() {
                   onMoveToFolder={moveItemToFolder}
                   onRefresh={fetchItems}
                   onEdit={setEditingItem}
+                  onUpdate={updateItem}
                 />
               }
             />
@@ -553,6 +574,7 @@ function App() {
                   onDelete={deleteItem}
                   onEdit={setEditingItem}
                   onToggleWatched={toggleWatched}
+                  onUpdate={updateItem}
                 />
               }
             />
@@ -603,7 +625,7 @@ function App() {
 
         <BottomNav />
 
-        <FloatingAddButton onAdd={setAddItemType} />
+        {location.pathname === '/' && <FloatingAddButton onAdd={setAddItemType} />}
       </div>
 
       {/* Add Item Modal from FAB */}
