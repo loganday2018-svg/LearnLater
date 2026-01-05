@@ -89,6 +89,12 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
     animateLayoutChanges
   })
 
+  // Reset swipe state when item updates (e.g., recurring task advances to next due date)
+  useEffect(() => {
+    setSwipeX(0)
+    setIsSwiping(false)
+  }, [item.due_date])
+
   // Play swipe hint animation on first card
   useEffect(() => {
     if (showHint && !hintPlayed) {
@@ -175,10 +181,10 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
       setSwipeX(-window.innerWidth)
       setTimeout(() => onDelete(item.id), 200)
     } else if (swipeX > 70 && hasRightAction) {
-      // Swipe right - complete
+      // Swipe right - complete (don't animate offscreen since item may stay in list for recurring)
       vibrate([10, 50, 10])
-      setSwipeX(window.innerWidth)
-      setTimeout(() => onComplete(item.id), 200)
+      onComplete(item.id)
+      setSwipeX(0)
     } else {
       setSwipeX(0)
     }
