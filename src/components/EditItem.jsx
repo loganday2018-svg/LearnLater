@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import MarkdownEditor from './MarkdownEditor'
-import TagInput from './TagInput'
 import RecurrenceSelector from './RecurrenceSelector'
 
-export default function EditItem({ item, onSave, onClose, allTags = [] }) {
+export default function EditItem({ item, onSave, onClose }) {
   const [title, setTitle] = useState(item.title || '')
   const [url, setUrl] = useState(item.url || '')
   const [content, setContent] = useState(item.content || '')
-  const [tags, setTags] = useState(item.tags || [])
   const [mediaType, setMediaType] = useState(item.type || 'movie')
   // Extract date portion from timestamp if needed (input type="date" needs YYYY-MM-DD)
   const [dueDate, setDueDate] = useState(() => {
@@ -34,7 +32,6 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
 
     const updates = {
       title: title.trim(),
-      tags: tags.length > 0 ? tags : null,
     }
 
     // Add due_date and recurrence for inbox items
@@ -225,17 +222,6 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
             </>
           )}
 
-          {!isWatchType && !isProjectType && (
-            <label>
-              <span>Tags</span>
-              <TagInput
-                tags={tags}
-                onChange={setTags}
-                allTags={allTags}
-              />
-            </label>
-          )}
-
           {/* Due date for inbox items */}
           {isInboxType && (
             <div className="due-date-input">
@@ -262,6 +248,29 @@ export default function EditItem({ item, onSave, onClose, allTags = [] }) {
                   </button>
                 )}
               </label>
+              <div className="due-date-quick-btns">
+                <button
+                  type="button"
+                  className={dueDate === new Date().toISOString().split('T')[0] ? 'selected' : ''}
+                  onClick={() => setDueDate(new Date().toISOString().split('T')[0])}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  className={dueDate === new Date(Date.now() + 86400000).toISOString().split('T')[0] ? 'selected' : ''}
+                  onClick={() => setDueDate(new Date(Date.now() + 86400000).toISOString().split('T')[0])}
+                >
+                  Tomorrow
+                </button>
+                <button
+                  type="button"
+                  className={dueDate === new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0] ? 'selected' : ''}
+                  onClick={() => setDueDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0])}
+                >
+                  Next week
+                </button>
+              </div>
               {dueDate && (
                 <RecurrenceSelector
                   value={recurrence}

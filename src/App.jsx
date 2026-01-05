@@ -16,6 +16,7 @@ import WatchListPage from './components/WatchListPage'
 import BooksPage from './components/BooksPage'
 import ProjectsPage from './components/ProjectsPage'
 import CountdownPage from './components/CountdownPage'
+import TattooRulesPage from './components/TattooRulesPage'
 import MenuOverlay from './components/MenuOverlay'
 import SharedFolderPage from './components/SharedFolderPage'
 import './App.css'
@@ -605,6 +606,16 @@ function App() {
               path="/countdowns"
               element={
                 <CountdownPage
+                  items={items}
+                  onAdd={addItem}
+                  onDelete={deleteItem}
+                />
+              }
+            />
+            <Route
+              path="/tattoo-rules"
+              element={
+                <TattooRulesPage
                   items={items}
                   onAdd={addItem}
                   onDelete={deleteItem}

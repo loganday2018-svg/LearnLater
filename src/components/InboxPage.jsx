@@ -4,6 +4,7 @@ import QuickAdd from './QuickAdd'
 import SwipeableItemCard from './SwipeableItemCard'
 import SkeletonCard from './SkeletonCard'
 import ExportModal from './ExportModal'
+import EmptyStateIllustration from './EmptyStateIllustration'
 import { vibrate, shareItems, formatInboxForShare } from '../utils'
 import useUndoDelete from '../hooks/useUndoDelete'
 
@@ -277,7 +278,7 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
         <SkeletonCard count={5} />
       ) : inboxItems.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">📥</div>
+          <EmptyStateIllustration type="inbox" />
           <h3>Your inbox is empty</h3>
           <p>Add links, notes, or images to save them for later.</p>
           <p>Drag items to folders to organize them.</p>

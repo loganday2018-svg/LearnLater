@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { vibrate } from '../utils'
 import ExportModal from './ExportModal'
+import EmptyStateIllustration from './EmptyStateIllustration'
 
 // Smart countdown display
 function formatCountdown(targetDate) {
@@ -189,7 +190,7 @@ export default function CountdownPage({ items, onAdd, onDelete }) {
 
       {countdowns.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">⏱️</div>
+          <EmptyStateIllustration type="countdown" />
           <h3>No countdowns yet</h3>
           <p>Add events you're counting down to!</p>
         </div>

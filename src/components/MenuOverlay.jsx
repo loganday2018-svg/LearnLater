@@ -37,6 +37,10 @@ export default function MenuOverlay({ isOpen, onClose, onSignOut }) {
               <span className="menu-icon">⏱️</span>
               <span>Countdowns</span>
             </button>
+            <button className="menu-item" onClick={() => handleNavigate('/tattoo-rules')}>
+              <span className="menu-icon">🖋️</span>
+              <span>Tattoo Rules</span>
+            </button>
           </div>
 
           <div className="menu-section">

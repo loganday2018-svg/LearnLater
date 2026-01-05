@@ -4,6 +4,7 @@ import { vibrate } from '../utils'
 import useUndoDelete from '../hooks/useUndoDelete'
 import SwipeableCard from './SwipeableCard'
 import ExportModal from './ExportModal'
+import EmptyStateIllustration from './EmptyStateIllustration'
 
 const CATEGORIES = ['personal', 'work', 'dad']
 
@@ -194,7 +195,7 @@ export default function ProjectsPage({ items, onAdd, onDelete, onUpdate, onEdit 
 
       {projects.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">📋</div>
+          <EmptyStateIllustration type="projects" />
           <h3>No {categoryFilter} projects yet</h3>
           <p>Add projects to track your goals and ideas!</p>
         </div>

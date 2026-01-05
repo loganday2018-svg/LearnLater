@@ -388,6 +388,29 @@ export default function AddItem({ onAdd, initialType = null, onClose }) {
                 </button>
               )}
             </label>
+            <div className="due-date-quick-btns">
+              <button
+                type="button"
+                className={dueDate === new Date().toISOString().split('T')[0] ? 'selected' : ''}
+                onClick={() => setDueDate(new Date().toISOString().split('T')[0])}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                className={dueDate === new Date(Date.now() + 86400000).toISOString().split('T')[0] ? 'selected' : ''}
+                onClick={() => setDueDate(new Date(Date.now() + 86400000).toISOString().split('T')[0])}
+              >
+                Tomorrow
+              </button>
+              <button
+                type="button"
+                className={dueDate === new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0] ? 'selected' : ''}
+                onClick={() => setDueDate(new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0])}
+              >
+                Next week
+              </button>
+            </div>
             {dueDate && (
               <RecurrenceSelector
                 value={recurrence}

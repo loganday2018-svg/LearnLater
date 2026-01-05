@@ -4,6 +4,7 @@ import { vibrate, shareItems, formatWatchListForShare } from '../utils'
 import useUndoDelete from '../hooks/useUndoDelete'
 import SwipeableCard from './SwipeableCard'
 import ExportModal from './ExportModal'
+import EmptyStateIllustration from './EmptyStateIllustration'
 
 export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggleWatched, onUpdate }) {
   const [typeFilter, setTypeFilter] = useState('youtube') // youtube, movies
@@ -222,7 +223,7 @@ export default function WatchListPage({ items, onAdd, onDelete, onEdit, onToggle
 
       {watchItems.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">{typeFilter === 'youtube' ? '▶️' : '🎬'}</div>
+          <EmptyStateIllustration type={typeFilter === 'youtube' ? 'youtube' : 'watch'} />
           <h3>No {typeFilter === 'youtube' ? 'YouTube videos' : 'movies or shows'} yet</h3>
           <p>Add {typeFilter === 'youtube' ? 'videos' : 'movies and TV shows'} you want to watch!</p>
         </div>

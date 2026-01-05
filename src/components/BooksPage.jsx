@@ -5,6 +5,7 @@ import { vibrate, shareItems, formatBooksForShare } from '../utils'
 import useUndoDelete from '../hooks/useUndoDelete'
 import SwipeableCard from './SwipeableCard'
 import ExportModal from './ExportModal'
+import EmptyStateIllustration from './EmptyStateIllustration'
 
 export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
   const [filter, setFilter] = useState('all')
@@ -356,7 +357,7 @@ export default function BooksPage({ items, onAdd, onDelete, onUpdate }) {
 
       {books.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">📚</div>
+          <EmptyStateIllustration type="books" />
           <h3>
             {filter === 'all'
               ? 'No books yet'

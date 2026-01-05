@@ -3,6 +3,7 @@ import { useDroppable } from '@dnd-kit/core'
 import FolderItem from './FolderItem'
 import CreateFolder from './CreateFolder'
 import AddItem from './AddItem'
+import EmptyStateIllustration from './EmptyStateIllustration'
 
 function RootDropZone({ children }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -49,7 +50,7 @@ export default function LibraryPage({
       <RootDropZone>
         {rootFolders.length === 0 ? (
           <div className="empty-state">
-            <div className="empty-state-icon">📁</div>
+            <EmptyStateIllustration type="library" />
             <h3>No folders yet</h3>
             <p>Create folders to organize your saved items.</p>
             <p>Drag items from Inbox to folders here.</p>

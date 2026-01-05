@@ -281,7 +281,12 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
 
           {item.type === 'link' && item.url && (
             <p className="card-url">
-              {item.favicon && <img src={item.favicon} alt="" className="favicon" onError={(e) => e.target.style.display = 'none'} />}
+              <img
+                src={item.favicon || `https://www.google.com/s2/favicons?domain=${getHostname(item.url)}&sz=32`}
+                alt=""
+                className="favicon"
+                onError={(e) => e.target.style.display = 'none'}
+              />
               {item.site_name || getHostname(item.url)}
             </p>
           )}
