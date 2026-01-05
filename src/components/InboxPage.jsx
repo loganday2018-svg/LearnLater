@@ -254,16 +254,6 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
                 >
                   PDF
                 </button>
-                <button
-                  className="select-mode-btn"
-                  onClick={() => {
-                    vibrate(5)
-                    setSelectionMode(true)
-                  }}
-                  aria-label="Select items"
-                >
-                  ☑
-                </button>
               </>
             )}
           </>

@@ -239,6 +239,14 @@ export default function AddItem({ onAdd, initialType = null, onClose }) {
   }
 
   function renderForm() {
+    // Quick submit on Enter/Done key from title field
+    function handleTitleKeyDown(e) {
+      if (e.key === 'Enter' && title.trim() && !loading) {
+        e.preventDefault()
+        handleSubmit(e)
+      }
+    }
+
     return (
       <form onSubmit={handleSubmit}>
         <input
@@ -246,9 +254,11 @@ export default function AddItem({ onAdd, initialType = null, onClose }) {
           placeholder="Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          onKeyDown={handleTitleKeyDown}
           required
           maxLength={200}
           autoFocus
+          enterKeyHint="done"
         />
 
         {type === 'link' && (
