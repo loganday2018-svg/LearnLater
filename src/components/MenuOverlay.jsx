@@ -29,6 +29,10 @@ export default function MenuOverlay({ isOpen, onClose, onSignOut }) {
         <nav className="menu-nav">
           <div className="menu-section">
             <h3>Features</h3>
+            <button className="menu-item" onClick={() => handleNavigate('/audible')}>
+              <span className="menu-icon">🎧</span>
+              <span>Audible Notes</span>
+            </button>
             <button className="menu-item" onClick={() => handleNavigate('/books')}>
               <span className="menu-icon">📖</span>
               <span>Books</span>
@@ -56,10 +60,6 @@ export default function MenuOverlay({ isOpen, onClose, onSignOut }) {
             <div className="menu-item disabled">
               <span className="menu-icon">✅</span>
               <span>Tasks</span>
-            </div>
-            <div className="menu-item disabled">
-              <span className="menu-icon">🎧</span>
-              <span>Podcasts</span>
             </div>
             <div className="menu-item disabled">
               <span className="menu-icon">🍽️</span>

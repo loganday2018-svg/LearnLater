@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-export default function CreateFolder({ parentId, onClose, onCreate }) {
+export default function CreateFolder({ parentId, onClose, onCreate, placeholder = "Folder name", title }) {
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -17,14 +17,16 @@ export default function CreateFolder({ parentId, onClose, onCreate }) {
     }
   }
 
+  const modalTitle = title || (parentId ? 'New Subfolder' : 'New Folder')
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={e => e.stopPropagation()}>
-        <h3>{parentId ? 'New Subfolder' : 'New Folder'}</h3>
+        <h3>{modalTitle}</h3>
         <form onSubmit={handleSubmit}>
           <input
             type="text"
-            placeholder="Folder name"
+            placeholder={placeholder}
             value={name}
             onChange={e => setName(e.target.value)}
             autoFocus

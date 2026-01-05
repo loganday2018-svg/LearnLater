@@ -19,6 +19,8 @@ import CountdownPage from './components/CountdownPage'
 import TattooRulesPage from './components/TattooRulesPage'
 import MenuOverlay from './components/MenuOverlay'
 import SharedFolderPage from './components/SharedFolderPage'
+import AudiblePage from './components/AudiblePage'
+import PageTransition from './components/PageTransition'
 import './App.css'
 
 function App() {
@@ -336,10 +338,10 @@ function App() {
     }
   }
 
-  async function createFolder(name, parentId = null) {
+  async function createFolder(name, parentId = null, folderType = 'library') {
     try {
       const maxPosition = folders
-        .filter(f => f.parent_id === parentId)
+        .filter(f => f.parent_id === parentId && f.folder_type === folderType)
         .reduce((max, f) => Math.max(max, f.position || 0), -1)
 
       const { data, error } = await supabase
@@ -348,7 +350,8 @@ function App() {
           name,
           parent_id: parentId,
           user_id: session.user.id,
-          position: maxPosition + 1
+          position: maxPosition + 1,
+          folder_type: folderType
         }])
         .select()
 
@@ -535,6 +538,7 @@ function App() {
         )}
 
         <main>
+          <PageTransition>
           <Routes>
             <Route
               path="/"
@@ -623,6 +627,20 @@ function App() {
               }
             />
             <Route
+              path="/audible"
+              element={
+                <AudiblePage
+                  items={items}
+                  folders={folders}
+                  onCreateFolder={createFolder}
+                  onDeleteFolder={deleteFolder}
+                  onDeleteItem={deleteItem}
+                  onAddItem={addItem}
+                  onShareFolder={toggleFolderShare}
+                />
+              }
+            />
+            <Route
               path="/share"
               element={
                 <ShareHandler
@@ -632,6 +650,7 @@ function App() {
               }
             />
           </Routes>
+          </PageTransition>
         </main>
 
         <BottomNav />

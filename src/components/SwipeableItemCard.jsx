@@ -223,11 +223,15 @@ export default function SwipeableItemCard({ item, onDelete, onComplete, onEdit, 
     boxShadow: isDragging ? '0 12px 28px rgba(0, 122, 255, 0.35)' : undefined,
   }
 
+  // Determine swipe state classes
+  const swipeDirection = swipeX < -10 ? 'swiping-left' : swipeX > 10 ? 'swiping-right' : ''
+  const swipeReady = Math.abs(swipeX) > 70 ? 'swipe-ready' : ''
+
   return (
     <div
       ref={setNodeRef}
       style={containerStyle}
-      className={`swipe-container ${isDragging ? 'is-dragging' : ''} ${isPendingDelete ? 'pending-delete' : ''}`}
+      className={`swipe-container ${isDragging ? 'is-dragging' : ''} ${isPendingDelete ? 'pending-delete' : ''} ${swipeDirection} ${swipeReady}`}
     >
       {hasRightAction && (
         <div className="swipe-action complete-action">

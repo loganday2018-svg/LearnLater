@@ -62,6 +62,17 @@ export default function EmptyStateIllustration({ type }) {
         <rect x="55" y="12" width="10" height="8" rx="2" fill="#F59E0B"/>
       </svg>
     ),
+    audible: (
+      <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="60" cy="60" r="35" fill="#FFF7ED" stroke="#F97316" strokeWidth="2"/>
+        <circle cx="60" cy="60" r="22" fill="#FFEDD5" stroke="#F97316" strokeWidth="2"/>
+        <circle cx="60" cy="60" r="8" fill="#F97316"/>
+        <path d="M95 45C100 52 100 68 95 75" stroke="#F97316" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M102 38C110 50 110 70 102 82" stroke="#F97316" strokeWidth="3" strokeLinecap="round" opacity="0.5"/>
+        <path d="M25 45C20 52 20 68 25 75" stroke="#F97316" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M18 38C10 50 10 70 18 82" stroke="#F97316" strokeWidth="3" strokeLinecap="round" opacity="0.5"/>
+      </svg>
+    ),
   }
 
   return (
