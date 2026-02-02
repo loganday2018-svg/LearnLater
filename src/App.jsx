@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { DndContext, TouchSensor, MouseSensor, useSensor, useSensors, closestCenter, DragOverlay } from '@dnd-kit/core'
 import { arrayMove } from '@dnd-kit/sortable'
 import { supabase } from './supabaseClient'
-import { getNextDueDate } from './utils'
+import { getNextDueDate, haptics } from './utils'
 import Auth from './components/Auth'
 import BottomNav from './components/BottomNav'
 import InboxPage from './components/InboxPage'
@@ -17,10 +17,16 @@ import BooksPage from './components/BooksPage'
 import ProjectsPage from './components/ProjectsPage'
 import CountdownPage from './components/CountdownPage'
 import TattooRulesPage from './components/TattooRulesPage'
+import ThoughtsPage from './components/ThoughtsPage'
 import MenuOverlay from './components/MenuOverlay'
 import SharedFolderPage from './components/SharedFolderPage'
 import AudiblePage from './components/AudiblePage'
+import ArchivePage from './components/ArchivePage'
+import SharedItemPage from './components/SharedItemPage'
 import PageTransition from './components/PageTransition'
+import { loadSavedAccentColor } from './components/ColorPicker'
+import { initSeasonalTheme } from './components/SeasonalTheme'
+import { clearReadingPositionForItem } from './hooks/useReadingPosition'
 import './App.css'
 
 function App() {
@@ -35,6 +41,10 @@ function App() {
   const [editingItem, setEditingItem] = useState(null)
   const [addItemType, setAddItemType] = useState(null)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  // Track magnetic snap state for haptic feedback
+  const lastOverIdRef = useRef(null)
+  const snapTimeoutRef = useRef(null)
 
   // Calculate all unique tags from items for autocomplete
   const allTags = useMemo(() => {
@@ -62,17 +72,67 @@ function App() {
 
   const sensors = useSensors(touchSensor, mouseSensor)
 
-  // Handle drag end for reordering
+  // Magnetic snap effect - haptic feedback when hovering over a new drop target
+  const handleDragOver = useCallback((event) => {
+    const { over } = event
+    const overId = over?.id
+
+    // Only trigger snap when moving to a different position
+    if (overId && overId !== lastOverIdRef.current) {
+      // Clear any pending timeout
+      if (snapTimeoutRef.current) {
+        clearTimeout(snapTimeoutRef.current)
+      }
+
+      // Debounce the snap feedback slightly to prevent rapid firing
+      snapTimeoutRef.current = setTimeout(() => {
+        haptics.snap()
+      }, 30)
+
+      lastOverIdRef.current = overId
+    }
+  }, [])
+
+  // Reset snap state and provide final drop feedback
+  const handleDragStart = useCallback(() => {
+    lastOverIdRef.current = null
+    haptics.drag()
+  }, [])
+
+  // Handle drag end for reordering and moving to folders
   async function handleDragEnd(event) {
     const { active, over } = event
 
+    // Clear snap timeout and reset state
+    if (snapTimeoutRef.current) {
+      clearTimeout(snapTimeoutRef.current)
+    }
+    lastOverIdRef.current = null
+
+    // Satisfying drop haptic feedback
+    haptics.drop()
+
     if (!over || active.id === over.id) return
 
-    // Find which item was dragged to determine the type group
+    // Find which item was dragged
     const draggedItem = items.find(item => item.id === active.id)
     if (!draggedItem) return
 
-    // Determine which type group to reorder
+    // Check if dropped onto a folder
+    const overData = over.data?.current
+    if (overData?.type === 'folder') {
+      // Move item to the folder
+      await moveItemToFolder(active.id, overData.folderId)
+      return
+    }
+
+    // Check if dropped onto library root (remove from folder)
+    if (over.id === 'library-root') {
+      await moveItemToFolder(active.id, null)
+      return
+    }
+
+    // Otherwise handle reordering within type groups
     let typeGroup = []
     const inboxTypes = ['link', 'text', 'image', 'checklist']
     const watchTypes = ['movie', 'show', 'youtube']
@@ -142,6 +202,12 @@ function App() {
     })
 
     return () => subscription.unsubscribe()
+  }, [])
+
+  // Apply seasonal theme first, then load user's saved accent color (if any)
+  useEffect(() => {
+    initSeasonalTheme()
+    loadSavedAccentColor()
   }, [])
 
   useEffect(() => {
@@ -217,6 +283,9 @@ function App() {
     const itemToDelete = items.find(item => item.id === id)
     if (!itemToDelete) return
 
+    // Clear any saved reading position for this item
+    clearReadingPositionForItem(id)
+
     // Remove from UI immediately
     setItems(items.filter(item => item.id !== id))
 
@@ -241,6 +310,40 @@ function App() {
   }
 
   async function executeDelete(id) {
+    // Archive instead of permanently delete
+    try {
+      const { error } = await supabase
+        .from('items')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', id)
+
+      if (error) {
+        console.error('Error archiving item:', error)
+      }
+    } catch (err) {
+      console.error('Network error:', err)
+    }
+  }
+
+  async function restoreItem(id) {
+    try {
+      const { error } = await supabase
+        .from('items')
+        .update({ archived_at: null })
+        .eq('id', id)
+
+      if (error) {
+        console.error('Error restoring item:', error)
+      } else {
+        // Refresh items to get the restored item back
+        fetchItems()
+      }
+    } catch (err) {
+      console.error('Network error:', err)
+    }
+  }
+
+  async function permanentDeleteItem(id) {
     try {
       const { error } = await supabase
         .from('items')
@@ -248,7 +351,10 @@ function App() {
         .eq('id', id)
 
       if (error) {
-        console.error('Error deleting item:', error)
+        console.error('Error permanently deleting item:', error)
+      } else {
+        // Remove from local state
+        setItems(items.filter(item => item.id !== id))
       }
     } catch (err) {
       console.error('Network error:', err)
@@ -437,6 +543,37 @@ function App() {
     }
   }
 
+  async function toggleItemShare(id) {
+    const item = items.find(i => i.id === id)
+    if (!item) return null
+
+    try {
+      const isPublic = !item.is_public
+      const shareId = isPublic && !item.share_id
+        ? Math.random().toString(36).substring(2, 10)
+        : item.share_id
+
+      const { data, error } = await supabase
+        .from('items')
+        .update({ is_public: isPublic, share_id: shareId })
+        .eq('id', id)
+        .select()
+
+      if (error) {
+        console.error('Error sharing item:', error)
+        setError('Failed to share item')
+        return null
+      }
+
+      setItems(items.map(i => i.id === id ? data[0] : i))
+      return data[0]
+    } catch (err) {
+      console.error('Network error:', err)
+      setError('Network error - please try again')
+      return null
+    }
+  }
+
   async function moveItemToFolder(itemId, folderId) {
     try {
       const { error } = await supabase
@@ -489,14 +626,15 @@ function App() {
     return <div className="loading">Loading...</div>
   }
 
-  // Allow shared folder view without authentication
-  const isSharedRoute = window.location.pathname.startsWith('/shared/')
+  // Allow shared views without authentication
+  const isSharedRoute = window.location.pathname.startsWith('/shared/') || window.location.pathname.startsWith('/item/')
   if (isSharedRoute) {
     return (
       <div className="app-wrapper">
         <div className="app shared-view">
           <Routes>
             <Route path="/shared/:shareId" element={<SharedFolderPage />} />
+            <Route path="/item/:shareId" element={<SharedItemPage />} />
           </Routes>
         </div>
       </div>
@@ -508,7 +646,7 @@ function App() {
   }
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
     <div className="app-wrapper">
       <div className="app">
         <header className="header">
@@ -553,8 +691,13 @@ function App() {
                   onRefresh={fetchItems}
                   onEdit={setEditingItem}
                   onUpdate={updateItem}
+                  onShare={toggleItemShare}
                 />
               }
+            />
+            <Route
+              path="/thoughts"
+              element={<ThoughtsPage />}
             />
             <Route
               path="/library"
@@ -567,6 +710,8 @@ function App() {
                   onDeleteItem={deleteItem}
                   onAddItem={addItem}
                   onShareFolder={toggleFolderShare}
+                  userEmail={session?.user?.email}
+                  onRefreshFolders={fetchFolders}
                 />
               }
             />
@@ -641,6 +786,16 @@ function App() {
               }
             />
             <Route
+              path="/archive"
+              element={
+                <ArchivePage
+                  items={items}
+                  onRestore={restoreItem}
+                  onPermanentDelete={permanentDeleteItem}
+                />
+              }
+            />
+            <Route
               path="/share"
               element={
                 <ShareHandler
@@ -682,6 +837,7 @@ function App() {
           item={editingItem}
           onSave={updateItem}
           onClose={() => setEditingItem(null)}
+          onShare={toggleItemShare}
           allTags={allTags}
         />
       )}

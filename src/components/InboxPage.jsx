@@ -5,11 +5,17 @@ import SwipeableItemCard from './SwipeableItemCard'
 import SkeletonCard from './SkeletonCard'
 import ExportModal from './ExportModal'
 import EmptyStateIllustration from './EmptyStateIllustration'
+import ItemArena, { useItemArena } from './ItemArena'
+import CelebrationOverlay, { useCelebration } from './CelebrationOverlay'
+import { getContextualAffirmation } from './Affirmations'
 import { vibrate, shareItems, formatInboxForShare } from '../utils'
 import useUndoDelete from '../hooks/useUndoDelete'
 
 export default function InboxPage({ items, folders, onAdd, onDelete, onComplete, onDeleteMultiple, onMoveToFolder, onRefresh, onEdit, onReorder, onUpdate, isLoading }) {
   const [sortBy, setSortBy] = useState('newest')
+  const [filterTab, setFilterTab] = useState(() => {
+    return localStorage.getItem('learnlater-inbox-filter') || 'today'
+  })
   const [isCompact, setIsCompact] = useState(() => {
     return localStorage.getItem('learnlater-compact-mode') === 'true'
   })
@@ -23,9 +29,18 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
   const [showFolderPicker, setShowFolderPicker] = useState(false)
   const [shareToast, setShareToast] = useState(null)
   const [showExportModal, setShowExportModal] = useState(false)
+  const [showShareMenu, setShowShareMenu] = useState(false)
+  const [affirmation, setAffirmation] = useState(null)
+  const shareMenuRef = useRef(null)
   const containerRef = useRef(null)
   const startY = useRef(0)
   const isPulling = useRef(false)
+
+  // Celebration hook for completion animations
+  const { celebration, celebrate, endCelebration } = useCelebration()
+
+  // Item Arena hook - random chance to show auction/fight on load
+  const { showArena, arenaMode, dismissArena } = useItemArena(items, 0.15)
 
   const {
     pendingDelete,
@@ -113,15 +128,96 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
     }
   }, [hasSeenHint])
 
+  // Close share menu when clicking outside
+  useEffect(() => {
+    if (!showShareMenu) return
+    function handleClick(e) {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target)) {
+        setShowShareMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('touchstart', handleClick)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('touchstart', handleClick)
+    }
+  }, [showShareMenu])
+
   // Inbox only shows link, text, image types (not watch/book items)
+  // Exclude archived items
   // IMPORTANT: This must be defined before handleShare which uses it
   const inboxTypes = ['link', 'text', 'image', 'checklist']
-  let inboxItems = items.filter(item => !item.folder_id && inboxTypes.includes(item.type))
+  let inboxItems = items.filter(item => !item.folder_id && inboxTypes.includes(item.type) && !item.archived_at)
+
+  // Helper to check if a date is today
+  const isToday = (dateStr) => {
+    if (!dateStr) return false
+    const today = new Date()
+    const date = new Date(dateStr)
+    return date.getFullYear() === today.getFullYear() &&
+           date.getMonth() === today.getMonth() &&
+           date.getDate() === today.getDate()
+  }
+
+  // Helper to check if a date is overdue (before today)
+  const isOverdue = (dateStr) => {
+    if (!dateStr) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const date = new Date(dateStr)
+    date.setHours(0, 0, 0, 0)
+    return date < today
+  }
+
+  // Helper to check if item is "upcoming" (has future due date, not today)
+  const isUpcoming = (dateStr) => {
+    if (!dateStr) return false
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const date = new Date(dateStr)
+    date.setHours(0, 0, 0, 0)
+    return date > today
+  }
+
+  // Handle filter tab change
+  const handleFilterChange = (tab) => {
+    setFilterTab(tab)
+    localStorage.setItem('learnlater-inbox-filter', tab)
+  }
+
+  // Filter items based on selected tab
+  // Today: no due date OR due today OR overdue
+  // Upcoming: has future due date
+  // All: everything
+  if (filterTab === 'today') {
+    inboxItems = inboxItems.filter(item =>
+      !item.due_date || isToday(item.due_date) || isOverdue(item.due_date)
+    )
+  } else if (filterTab === 'upcoming') {
+    inboxItems = inboxItems.filter(item => isUpcoming(item.due_date))
+  }
+  // 'all' shows everything, no filter needed
 
   inboxItems = [...inboxItems].sort((a, b) => {
     // Pinned items always first
     if (a.pinned && !b.pinned) return -1
     if (!a.pinned && b.pinned) return 1
+
+    // Overdue items next (sorted by due date, oldest first)
+    const aOverdue = isOverdue(a.due_date)
+    const bOverdue = isOverdue(b.due_date)
+    if (aOverdue && !bOverdue) return -1
+    if (!aOverdue && bOverdue) return 1
+    if (aOverdue && bOverdue) {
+      return new Date(a.due_date) - new Date(b.due_date)
+    }
+
+    // Items due today come next
+    const aDueToday = isToday(a.due_date)
+    const bDueToday = isToday(b.due_date)
+    if (aDueToday && !bDueToday) return -1
+    if (!aDueToday && bDueToday) return 1
 
     switch (sortBy) {
       case 'custom':
@@ -173,12 +269,38 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
   const handlePullEnd = useCallback(async () => {
     isPulling.current = false
     if (pullDistance > 60 && onRefresh) {
+      // Generate affirmation when pull threshold is reached
+      const inboxTypes = ['link', 'text', 'image', 'checklist']
+      const count = items.filter(item => !item.folder_id && inboxTypes.includes(item.type) && !item.archived_at).length
+      setAffirmation(getContextualAffirmation(count))
+
       setIsRefreshing(true)
       await onRefresh()
       setIsRefreshing(false)
+
+      // Clear affirmation after a delay
+      setTimeout(() => setAffirmation(null), 2500)
     }
     setPullDistance(0)
-  }, [pullDistance, onRefresh])
+  }, [pullDistance, onRefresh, items])
+
+  // Wrapped complete handler that triggers celebration
+  const handleCompleteWithCelebration = useCallback((id) => {
+    const item = items.find(i => i.id === id)
+    if (item) {
+      celebrate(item.title)
+    }
+    onComplete(id)
+  }, [items, onComplete, celebrate])
+
+  // Handle arena selection - opens the selected item
+  const handleArenaSelect = useCallback((item) => {
+    if (item.type === 'link' && item.url) {
+      window.open(item.url, '_blank', 'noopener,noreferrer')
+    } else {
+      onEdit(item)
+    }
+  }, [onEdit])
 
   return (
     <div
@@ -188,13 +310,19 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
       onTouchMove={handlePullMove}
       onTouchEnd={handlePullEnd}
     >
-      {(pullDistance > 0 || isRefreshing) && (
+      {(pullDistance > 0 || isRefreshing || affirmation) && (
         <div
           className="pull-indicator"
-          style={{ height: isRefreshing ? 50 : pullDistance }}
+          style={{ height: isRefreshing || affirmation ? 60 : pullDistance }}
         >
           {isRefreshing ? (
             <div className="refresh-spinner"></div>
+          ) : affirmation ? (
+            <div className="affirmation">
+              <span className={`affirmation-text ${affirmation.type}`}>
+                {affirmation.text}
+              </span>
+            </div>
           ) : (
             <>
               <span
@@ -212,6 +340,27 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
       )}
 
       <QuickAdd onAdd={onAdd} />
+
+      <div className="filter-tabs">
+        <button
+          className={`filter-tab ${filterTab === 'today' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('today')}
+        >
+          Today
+        </button>
+        <button
+          className={`filter-tab ${filterTab === 'upcoming' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('upcoming')}
+        >
+          Upcoming
+        </button>
+        <button
+          className={`filter-tab ${filterTab === 'all' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('all')}
+        >
+          All
+        </button>
+      </div>
 
       <div className="controls-bar">
         {!selectionMode ? (
@@ -236,25 +385,40 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
               {isCompact ? '☰' : '▤'}
             </button>
             {inboxItems.length > 0 && (
-              <>
+              <div className="share-menu-container" ref={shareMenuRef}>
                 <button
                   className="share-btn"
-                  onClick={handleShare}
+                  onClick={() => {
+                    vibrate(5)
+                    setShowShareMenu(!showShareMenu)
+                  }}
                   aria-label="Share items"
                 >
                   ↗
                 </button>
-                <button
-                  className="export-pdf-btn"
-                  onClick={() => {
-                    vibrate(5)
-                    setShowExportModal(true)
-                  }}
-                  aria-label="Export to PDF"
-                >
-                  PDF
-                </button>
-              </>
+                {showShareMenu && (
+                  <div className="share-menu-dropdown">
+                    <button
+                      className="share-menu-item"
+                      onClick={() => {
+                        setShowShareMenu(false)
+                        handleShare()
+                      }}
+                    >
+                      📤 Share as Text
+                    </button>
+                    <button
+                      className="share-menu-item"
+                      onClick={() => {
+                        setShowShareMenu(false)
+                        setShowExportModal(true)
+                      }}
+                    >
+                      📄 Export as PDF
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
           </>
         ) : (
@@ -281,7 +445,7 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
                 key={item.id}
                 item={item}
                 onDelete={handleDeleteWithUndo}
-                onComplete={onComplete}
+                onComplete={handleCompleteWithCelebration}
                 onEdit={onEdit}
                 onPin={handlePin}
                 showHint={index === 0 && !hasSeenHint && !selectionMode}
@@ -363,6 +527,23 @@ export default function InboxPage({ items, folders, onAdd, onDelete, onComplete,
           items={inboxItems}
           tabName="Inbox"
           onClose={() => setShowExportModal(false)}
+        />
+      )}
+
+      {/* Celebration Overlay */}
+      <CelebrationOverlay
+        show={celebration.show}
+        itemTitle={celebration.title}
+        onComplete={endCelebration}
+      />
+
+      {/* Item Arena (Auction/Fight modes) */}
+      {showArena && (
+        <ItemArena
+          items={items}
+          mode={arenaMode}
+          onSelect={handleArenaSelect}
+          onDismiss={dismissArena}
         />
       )}
     </div>
